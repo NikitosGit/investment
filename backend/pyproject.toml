@@ -1,0 +1,52 @@
+[project]
+name = "investment-tracker-backend"
+version = "0.1.0"
+description = "Backend for the local investment portfolio tracker"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.14,<2.0",
+    "apscheduler>=3.11,<4.0",
+    "fastapi>=0.115,<1.0",
+    "httpx>=0.28,<1.0",
+    "pydantic>=2.10,<3.0",
+    "pydantic-settings>=2.7,<3.0",
+    "sqlalchemy>=2.0.36,<3.0",
+    "tenacity>=9.0,<10.0",
+    "tzdata>=2024.1; sys_platform == 'win32'",
+    "uvicorn[standard]>=0.30,<1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9.0",
+    "pytest-cov>=6.0,<7.0",
+    "respx>=0.22,<1.0",
+    "ruff>=0.8,<1.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
