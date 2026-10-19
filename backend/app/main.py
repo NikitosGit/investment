@@ -8,12 +8,14 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, reset_request_id, set_request_id
-from app.db.session import engine
+from app.db.session import SessionLocal, engine
+from app.services import portfolio_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,20 @@ logger = logging.getLogger(__name__)
 def _prepare_directories(settings: Settings) -> None:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     settings.backup_dir.mkdir(parents=True, exist_ok=True)
+
+
+def _ensure_portfolio() -> None:
+    """Create the single portfolio when the schema is ready."""
+
+    with SessionLocal() as session:
+        try:
+            portfolio_service.ensure_default_portfolio(session)
+        except SQLAlchemyError:
+            logger.warning(
+                "База данных не готова: портфель не создан. "
+                "Выполните 'uv run alembic upgrade head'.",
+            )
+            logger.debug("Portfolio bootstrap failed", exc_info=True)
 
 
 @asynccontextmanager
@@ -36,6 +52,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.app_env,
         settings.database_url,
     )
+    _ensure_portfolio()
     try:
         yield
     finally:

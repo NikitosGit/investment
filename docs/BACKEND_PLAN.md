@@ -1566,7 +1566,7 @@ Backend реализуется первым и заканчивается ста
 Отметки о выполнении этапов. Детали и результаты ревью — в [`BACKEND_PROGRESS.md`](BACKEND_PROGRESS.md).
 
 - [x] Этап 0. Каркас, конфигурация, логирование, health
-- [ ] Этап 1. Модели, Alembic, SQLite PRAGMA, seed портфеля
+- [x] Этап 1. Модели, Alembic, SQLite PRAGMA, seed портфеля
 - [ ] Этап 2. MOEX client: поиск, инфо, котировка, история, bondization
 - [ ] Этап 3. AssetService + API активов
 - [ ] Этап 4. OperationService + PositionService + API

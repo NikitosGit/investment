@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 _TEST_DATA_DIR = Path(tempfile.mkdtemp(prefix="investment-tracker-tests-"))
 os.environ.setdefault("APP_ENV", "test")
@@ -16,7 +17,7 @@ os.environ["DATA_DIR"] = str(_TEST_DATA_DIR)
 os.environ["BACKUP_DIR"] = str(_TEST_DATA_DIR / "backups")
 
 from app.db.base import Base  # noqa: E402
-from app.db.session import engine  # noqa: E402
+from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 
 
@@ -40,3 +41,9 @@ def _reset_database() -> Generator[None, None, None]:
 def client() -> Generator[TestClient, None, None]:
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def db_session() -> Generator[Session, None, None]:
+    with SessionLocal() as session:
+        yield session
