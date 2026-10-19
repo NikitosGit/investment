@@ -1,4 +1,4 @@
-"""Enumerations shared by ORM models and API schemas.
+"""Domain enumerations shared by the database, provider and API layers.
 
 All enums inherit :class:`enum.StrEnum`, so their values are plain strings and
 are stored verbatim in the database.

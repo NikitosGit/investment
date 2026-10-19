@@ -1,0 +1,21 @@
+{
+  "securities": {
+    "metadata": {
+      "secid": {"type": "string"},
+      "shortname": {"type": "string"},
+      "name": {"type": "string"},
+      "isin": {"type": "string"},
+      "type": {"type": "string"},
+      "primary_boardid": {"type": "string"},
+      "is_traded": {"type": "int32"}
+    },
+    "columns": ["secid", "shortname", "name", "isin", "type", "primary_boardid", "is_traded"],
+    "data": [
+      ["SBER", "Сбербанк", "Сбербанк России ПАО ао", "RU0009029540", "common_share", "TQBR", 1],
+      ["SBERP", "Сбербанк-п", "Сбербанк России ПАО ап", "RU0009029532", "preferred_share", "TQBR", 1],
+      ["SU26238RMFS4", "ОФЗ 26238", "ОФЗ 26238", "RU000A0JX0J2", "ofz_bond", "TQCB", 1],
+      ["GAZP", "Газпром", "Газпром ПАО ао", "RU0007661625", "common_share", "TQTF", 1],
+      ["DELISTED", "Делистинг", "Делистинг ПАО ао", "RU0000000001", "common_share", "TQBR", 0]
+    ]
+  }
+}

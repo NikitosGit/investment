@@ -14,9 +14,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.enums import DataSource
 from app.core.time import utc_now_naive
 from app.db.base import Base, db_enum
-from app.db.enums import DataSource
 
 
 class BondAmortization(Base):

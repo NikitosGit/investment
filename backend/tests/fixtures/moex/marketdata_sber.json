@@ -1,0 +1,6 @@
+{
+  "marketdata": {
+    "columns": ["SECID", "BOARDID", "LAST", "LCURRENTPRICE", "MARKETPRICE", "PREVPRICE"],
+    "data": [["SBER", "TQBR", null, 310.5, 309.0, 305.0]]
+  }
+}

@@ -1,14 +1,18 @@
 """Test fixtures for the backend suite."""
 
+import json
 import os
 import shutil
 import tempfile
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 _TEST_DATA_DIR = Path(tempfile.mkdtemp(prefix="investment-tracker-tests-"))
 os.environ.setdefault("APP_ENV", "test")
@@ -47,3 +51,13 @@ def client() -> Generator[TestClient, None, None]:
 def db_session() -> Generator[Session, None, None]:
     with SessionLocal() as session:
         yield session
+
+
+@pytest.fixture
+def load_fixture() -> Callable[..., Any]:
+    """Return a loader for JSON fixtures under ``tests/fixtures``."""
+
+    def _load(*parts: str) -> Any:
+        return json.loads(FIXTURES_DIR.joinpath(*parts).read_text(encoding="utf-8"))
+
+    return _load

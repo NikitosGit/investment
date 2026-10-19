@@ -1,0 +1,9 @@
+{
+  "history": {
+    "columns": ["TRADEDATE", "CLOSE", "LEGALCLOSEPRICE"],
+    "data": [
+      ["2026-01-10", 100.0, 99.0],
+      ["2026-01-11", null, 101.0]
+    ]
+  }
+}

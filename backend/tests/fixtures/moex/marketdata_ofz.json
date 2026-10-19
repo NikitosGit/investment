@@ -1,0 +1,6 @@
+{
+  "marketdata": {
+    "columns": ["SECID", "BOARDID", "LAST", "LCURRENTPRICE", "MARKETPRICE", "PREVPRICE"],
+    "data": [["SU26238RMFS4", "TQCB", 98.5, 98.4, 98.0, 97.5]]
+  }
+}

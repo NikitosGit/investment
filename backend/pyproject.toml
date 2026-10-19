@@ -46,7 +46,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-ignore = ["B008"]
+# RUF001-003 flag Cyrillic characters that resemble Latin ones; the UI is Russian.
+ignore = ["B008", "RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

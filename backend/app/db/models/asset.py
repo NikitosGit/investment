@@ -5,9 +5,9 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.enums import AssetType
 from app.core.time import utc_now_naive
 from app.db.base import Base, db_enum
-from app.db.enums import AssetType
 
 
 class Asset(Base):

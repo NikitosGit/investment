@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.enums import (
+from app.core.enums import (
     AssetType,
     DataSource,
     IncomeKind,

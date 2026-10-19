@@ -1,0 +1,29 @@
+{
+  "securities": {
+    "metadata": {
+      "SECID": {"type": "string"},
+      "BOARDID": {"type": "string"},
+      "SECNAME": {"type": "string"},
+      "SHORTNAME": {"type": "string"},
+      "ISIN": {"type": "string"},
+      "TYPE": {"type": "string"},
+      "LOTSIZE": {"type": "int32"},
+      "FACEVALUE": {"type": "double"},
+      "FACEUNIT": {"type": "string"}
+    },
+    "columns": [
+      "SECID",
+      "BOARDID",
+      "SECNAME",
+      "SHORTNAME",
+      "ISIN",
+      "TYPE",
+      "LOTSIZE",
+      "FACEVALUE",
+      "FACEUNIT"
+    ],
+    "data": [
+      ["SU26238RMFS4", "TQCB", "ОФЗ 26238", "ОФЗ 26238", "RU000A0JX0J2", "ofz_bond", 1, 1000.0, "SUR"]
+    ]
+  }
+}

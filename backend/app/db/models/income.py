@@ -13,9 +13,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.enums import DataSource, IncomeKind, IncomeStatus
 from app.core.time import utc_now_naive
 from app.db.base import Base, db_enum
-from app.db.enums import DataSource, IncomeKind, IncomeStatus
 
 
 class Income(Base):

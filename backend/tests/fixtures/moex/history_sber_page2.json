@@ -1,0 +1,10 @@
+{
+  "history": {
+    "columns": ["TRADEDATE", "CLOSE", "LEGALCLOSEPRICE"],
+    "data": [["2026-01-12", 102.0, 101.5]]
+  },
+  "history.cursor": {
+    "columns": ["INDEX", "TOTAL", "PAGESIZE"],
+    "data": [[2, 3, 2]]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "coupons": {
+    "columns": ["coupondate", "value", "value_rub", "valueprc", "recorddate"],
+    "data": [
+      ["2026-06-01", "35.4", "35.40", "3.54", "2026-05-25"],
+      ["2026-12-01", "35.4", "35.40", "3.54", "2026-11-24"],
+      ["2027-06-01", "36.0", null, "3.60", "2027-05-25"]
+    ]
+  },
+  "amortizations": {
+    "columns": ["amortizationdate", "value", "value_rub", "valueprc"],
+    "data": [["2030-01-01", "200", "200.00", "20.0"]]
+  }
+}

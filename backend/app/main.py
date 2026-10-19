@@ -10,9 +10,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.error_handlers import register_exception_handlers
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
-from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, reset_request_id, set_request_id
 from app.db.session import SessionLocal, engine
 from app.services import portfolio_service
