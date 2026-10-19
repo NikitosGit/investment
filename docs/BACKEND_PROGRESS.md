@@ -89,3 +89,29 @@
 - Required 3 (архитектура): провайдер транзитивно импортировал FastAPI — `AppError`/`ErrorCode` вынесены в framework-free `app/core/errors.py`, обработчики — в `app/api/error_handlers.py`.
 - Optional: `429` теперь retryable; при запросе несуществующего борда `get_security_info` возвращает not found, а не первую попавшуюся строку.
 - Добавлены тесты: приоритет цены (все 4 поля), котировка облигации в процентах, `User-Agent`/`from_settings`, троттлинг, ограничение пагинации, невалидный JSON/не-объект/4xx.
+
+## Этап 3. AssetService + API активов — ✅ выполнено
+
+**Реализовано**
+
+- `app/services/asset_service.py`: `list_assets`, `get_asset` (404 `ASSET_NOT_FOUND`), `search_moex`, `create_from_moex`, `refresh_asset`, `delete_asset`; нормализация тикера, проверка дубля до запроса в MOEX, атомарное создание/обновление (rollback при ошибке MOEX), `AssetCard` + `get_asset_card`.
+- `app/services/bondization_service.py`: идемпотентный upsert купонов (`EXPECTED`, только будущие, PAID не перезаписываются) и амортизации по `external_id`; `current_face_value_kopecks` (номинал минус амортизация, не ниже 0), `list_amortizations`.
+- `app/services/portfolio_service.py`: `ensure_default_portfolio(commit=False)` — создание портфеля в общей транзакции без скрытого commit.
+- `app/schemas/asset.py`: ответы с деньгами-строками (`initial_face_value`, `current_face_value`, `amount_per_unit`), `AssetDetail.from_asset`.
+- `app/api/routes/assets.py`: `GET /api/assets`, `GET /api/assets/search`, `POST /api/assets` (201), `GET /api/assets/{id}`, `POST /api/assets/{id}/refresh`, `DELETE /api/assets/{id}` (204).
+- `app/api/deps.py` + `app/main.py`: единый `MoexClient` в `app.state`, `MoexDep`, закрытие клиента на shutdown.
+- Тесты: 21 API/service-тест на respx (поиск, создание акции/облигации, атомарность, дубликат в другом регистре, type mismatch, отсутствие номинала, refresh, delete rules, OpenAPI).
+
+**Проверка**
+
+- `uv run ruff check .` / `ruff format --check .` — чисто.
+- `uv run pytest` — 102 passed; покрытие `app/services` — 100% (188 stmts, 38 branches).
+- Сеть не используется, все MOEX-ответы — фикстуры `tests/fixtures/moex/`.
+
+**Ревью (независимый агент, 5 осей + повторная проверка исправлений)**
+
+- Required 1: создание облигации коммитило актив до загрузки bondization → при ошибке MOEX оставался «битый» актив. Исправлено: `flush` → синхронизация → один `commit`, rollback при ошибке; тест 502 + пустой список активов.
+- Required 2: свежедобавленную облигацию нельзя было удалить из-за EXPECTED-купонов. Исправлено: блокируют только операции и PAID-доходы; EXPECTED-купоны удаляются вместе с активом.
+- Optional: сборка карточки перенесена в сервис; `secid` нормализуется (регистронезависимый дубль, индекс); убран скрытый commit в синхронизации; добавлен OpenAPI smoke-тест и тесты type mismatch/отсутствующего номинала.
+- Повторное ревью: PASS по всем 6 пунктам, новых Critical/Required нет.
+- Отложено осознанно: загрузка текущей цены и истории при добавлении актива (§7.7 шаг 4) — этап 6 (`QuoteService`); N+1 upsert и очистка устаревших EXPECTED при синхронизации — не критичны для MVP.

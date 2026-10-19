@@ -15,6 +15,7 @@ from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, reset_request_id, set_request_id
 from app.db.session import SessionLocal, engine
+from app.providers.moex.client import MoexClient
 from app.services import portfolio_service
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ def _ensure_portfolio() -> None:
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     """Prepare runtime resources on startup and release them on shutdown."""
 
     settings = get_settings()
@@ -53,10 +54,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.database_url,
     )
     _ensure_portfolio()
+    moex_client = MoexClient.from_settings(settings)
+    application.state.moex = moex_client
     try:
         yield
     finally:
         logger.info("Shutting down investment tracker")
+        moex_client.close()
         engine.dispose()
 
 

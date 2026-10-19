@@ -1,0 +1,29 @@
+{
+  "securities": {
+    "metadata": {
+      "SECID": {"type": "string"},
+      "BOARDID": {"type": "string"},
+      "SECNAME": {"type": "string"},
+      "SHORTNAME": {"type": "string"},
+      "ISIN": {"type": "string"},
+      "TYPE": {"type": "string"},
+      "LOTSIZE": {"type": "int32"},
+      "FACEVALUE": {"type": "double"},
+      "FACEUNIT": {"type": "string"}
+    },
+    "columns": [
+      "SECID",
+      "BOARDID",
+      "SECNAME",
+      "SHORTNAME",
+      "ISIN",
+      "TYPE",
+      "LOTSIZE",
+      "FACEVALUE",
+      "FACEUNIT"
+    ],
+    "data": [
+      ["SBER", "TQBR", "Сбербанк России ПАО ао (обновлено)", "Сбер", "RU0009029540", "common_share", 1, 3.0, "SUR"]
+    ]
+  }
+}

@@ -1,8 +1,18 @@
 """Portfolio API tests."""
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.db.models.portfolio import DEFAULT_PORTFOLIO_NAME
+from app.services import portfolio_service
+
+
+def test_non_committing_ensure_joins_the_caller_transaction(db_session: Session) -> None:
+    portfolio = portfolio_service.ensure_default_portfolio(db_session, commit=False)
+
+    assert portfolio.id is not None
+    db_session.rollback()
+    assert portfolio_service.get_portfolio(db_session) is None
 
 
 def test_reading_portfolio_creates_default(client: TestClient) -> None:

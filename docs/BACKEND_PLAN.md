@@ -1568,7 +1568,7 @@ Backend реализуется первым и заканчивается ста
 - [x] Этап 0. Каркас, конфигурация, логирование, health
 - [x] Этап 1. Модели, Alembic, SQLite PRAGMA, seed портфеля
 - [x] Этап 2. MOEX client: поиск, инфо, котировка, история, bondization
-- [ ] Этап 3. AssetService + API активов
+- [x] Этап 3. AssetService + API активов
 - [ ] Этап 4. OperationService + PositionService + API
 - [ ] Этап 5. IncomeService: купоны, амортизация, mark-paid, дивиденды
 - [ ] Этап 6. QuoteService: refresh, history, manual, scheduler

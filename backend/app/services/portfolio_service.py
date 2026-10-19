@@ -15,8 +15,12 @@ def get_portfolio(session: Session) -> Portfolio | None:
     return session.scalars(select(Portfolio).order_by(Portfolio.id)).first()
 
 
-def ensure_default_portfolio(session: Session) -> Portfolio:
-    """Return the portfolio, creating the default one when absent."""
+def ensure_default_portfolio(session: Session, *, commit: bool = True) -> Portfolio:
+    """Return the portfolio, creating the default one when absent.
+
+    With ``commit=False`` the new row is only flushed, so it participates in
+    the caller's transaction and is rolled back together with it.
+    """
 
     portfolio = get_portfolio(session)
     if portfolio is not None:
@@ -24,8 +28,11 @@ def ensure_default_portfolio(session: Session) -> Portfolio:
 
     portfolio = Portfolio(name=DEFAULT_PORTFOLIO_NAME, base_currency="RUB")
     session.add(portfolio)
-    session.commit()
-    session.refresh(portfolio)
+    if commit:
+        session.commit()
+        session.refresh(portfolio)
+    else:
+        session.flush()
     return portfolio
 
 
