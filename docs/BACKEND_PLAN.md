@@ -1571,7 +1571,7 @@ Backend реализуется первым и заканчивается ста
 - [x] Этап 3. AssetService + API активов
 - [x] Этап 4. OperationService + PositionService + API
 - [x] Этап 5. IncomeService: купоны, амортизация, mark-paid, дивиденды
-- [ ] Этап 6. QuoteService: refresh, history, manual, scheduler
+- [x] Этап 6. QuoteService: refresh, history, manual, scheduler
 - [ ] Этап 7. DashboardService + snapshots
 - [ ] Этап 8. Settings, backup, export
 - [ ] Этап 9. Тесты, OpenAPI, README, seed demo

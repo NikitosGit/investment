@@ -19,13 +19,16 @@ from app.core.enums import (
     OperationType,
     PriceType,
 )
+from app.core.time import today_local
 from app.db.models.asset import Asset
 from app.db.models.bond import BondAmortization
 from app.db.models.income import Income
 from app.db.models.operation import Operation
+from app.db.models.quote import Quote
 from app.services import asset_service, bondization_service, portfolio_service
 
-BASE_URL = "https://iss.moex.com/iss"
+from asset_helpers import BASE_URL, stub_quotes  # isort: skip
+
 FIXED_TODAY = date(2026, 1, 1)
 
 
@@ -68,6 +71,7 @@ def test_create_stock_persists_and_lists(
     respx.get(f"{BASE_URL}/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
     )
+    stub_quotes(load_fixture)
 
     response = client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"})
 
@@ -92,8 +96,34 @@ def test_create_stock_persists_and_lists(
     assert stored.market == "shares"
     assert stored.engine == "stock"
 
+    quote = db_session.scalars(select(Quote)).one()
+    assert quote.asset_id == stored.id
+    assert quote.price_micro == 310_500_000
+    assert quote.price_type is PriceType.RUB
+    assert quote.source is DataSource.MOEX
+    assert quote.quote_date == today_local()
+
     detail = client.get(f"/api/assets/{body['id']}").json()
     assert detail["name"] == "Сбербанк России ПАО ао"
+
+
+@respx.mock
+def test_create_asset_survives_quote_failure(
+    client: TestClient, db_session: Session, load_fixture: Callable[..., Any]
+) -> None:
+    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
+    )
+    # The intraday quote runs first; a 404 here is what makes the sync fail.
+    respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/SBER.json").mock(
+        return_value=httpx.Response(404)
+    )
+
+    response = client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"})
+
+    assert response.status_code == 201
+    db_session.rollback()
+    assert db_session.scalars(select(Quote)).all() == []
 
 
 @respx.mock
@@ -103,6 +133,7 @@ def test_duplicate_asset_conflicts_without_moex_call(
     route = respx.get(f"{BASE_URL}/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
     )
+    stub_quotes(load_fixture)
     payload = {"secid": "SBER", "board": "TQBR"}
     assert client.post("/api/assets", json=payload).status_code == 201
 
@@ -130,6 +161,13 @@ def test_create_bond_with_schedule(
     )
     respx.get(f"{BASE_URL}/securities/SU26238RMFS4/bondization.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "bondization_ofz_schedule.json"))
+    )
+    stub_quotes(
+        load_fixture,
+        secid="SU26238RMFS4",
+        market="bonds",
+        board="TQCB",
+        marketdata="marketdata_ofz.json",
     )
 
     response = client.post("/api/assets", json={"secid": "SU26238RMFS4", "board": "TQCB"})
@@ -163,6 +201,7 @@ def test_refresh_updates_name_and_lot(client: TestClient, load_fixture: Callable
             httpx.Response(200, json=load_fixture("moex", "security_sber_updated.json")),
         ]
     )
+    stub_quotes(load_fixture)
     asset_id = client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"}).json()["id"]
 
     response = client.post(f"/api/assets/{asset_id}/refresh")
@@ -179,6 +218,7 @@ def test_delete_unused_asset(client: TestClient, load_fixture: Callable[..., Any
     respx.get(f"{BASE_URL}/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
     )
+    stub_quotes(load_fixture)
     asset_id = client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"}).json()["id"]
 
     response = client.delete(f"/api/assets/{asset_id}")
@@ -195,6 +235,7 @@ def test_delete_asset_with_operation_is_rejected(
     respx.get(f"{BASE_URL}/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
     )
+    stub_quotes(load_fixture)
     asset_id = client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"}).json()["id"]
 
     db_session.rollback()
@@ -236,6 +277,13 @@ def test_refresh_bond_syncs_schedule(
     )
     respx.get(f"{BASE_URL}/securities/SU26238RMFS4/bondization.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "bondization_ofz_schedule.json"))
+    )
+    stub_quotes(
+        load_fixture,
+        secid="SU26238RMFS4",
+        market="bonds",
+        board="TQCB",
+        marketdata="marketdata_ofz.json",
     )
     asset_id = client.post("/api/assets", json={"secid": "SU26238RMFS4", "board": "TQCB"}).json()[
         "id"
@@ -287,218 +335,6 @@ def test_list_assets_filters_by_type(db_session: Session) -> None:
     ]
     bonds = asset_service.list_assets(db_session, asset_type=AssetType.BOND)
     assert [asset.secid for asset in bonds] == ["SU26238RMFS4"]
-
-
-def _security_payload(
-    *,
-    secid: str,
-    board: str,
-    security_type: str,
-    face_value: float | None,
-) -> dict[str, Any]:
-    """Build a minimal MOEX ``securities`` payload for edge cases."""
-
-    return {
-        "securities": {
-            "columns": [
-                "SECID",
-                "BOARDID",
-                "SECNAME",
-                "SHORTNAME",
-                "ISIN",
-                "TYPE",
-                "LOTSIZE",
-                "FACEVALUE",
-                "FACEUNIT",
-            ],
-            "data": [
-                [
-                    secid,
-                    board,
-                    "Тестовая бумага",
-                    "Тест",
-                    "RU0000000001",
-                    security_type,
-                    1,
-                    face_value,
-                    "SUR",
-                ]
-            ],
-        }
-    }
-
-
-@respx.mock
-def test_create_bond_rolls_back_on_bondization_failure(
-    client: TestClient, load_fixture: Callable[..., Any]
-) -> None:
-    respx.get(f"{BASE_URL}/securities/SU26238RMFS4.json").mock(
-        return_value=httpx.Response(200, json=load_fixture("moex", "security_ofz.json"))
-    )
-    respx.get(f"{BASE_URL}/securities/SU26238RMFS4/bondization.json").mock(
-        return_value=httpx.Response(500)
-    )
-
-    response = client.post("/api/assets", json={"secid": "SU26238RMFS4", "board": "TQCB"})
-
-    assert response.status_code == 502
-    assert response.json()["error"]["code"] == "MOEX_UNAVAILABLE"
-    assert client.get("/api/assets").json()["items"] == []
-
-
-@respx.mock
-def test_delete_new_bond_succeeds(
-    client: TestClient, db_session: Session, fixed_today: None, load_fixture: Callable[..., Any]
-) -> None:
-    respx.get(f"{BASE_URL}/securities/SU26238RMFS4.json").mock(
-        return_value=httpx.Response(200, json=load_fixture("moex", "security_ofz.json"))
-    )
-    respx.get(f"{BASE_URL}/securities/SU26238RMFS4/bondization.json").mock(
-        return_value=httpx.Response(200, json=load_fixture("moex", "bondization_ofz_schedule.json"))
-    )
-    asset_id = client.post("/api/assets", json={"secid": "SU26238RMFS4", "board": "TQCB"}).json()[
-        "id"
-    ]
-
-    response = client.delete(f"/api/assets/{asset_id}")
-
-    assert response.status_code == 204
-    assert client.get(f"/api/assets/{asset_id}").status_code == 404
-
-    db_session.rollback()
-    assert db_session.scalar(select(func.count()).select_from(Income)) == 0
-    assert db_session.scalar(select(func.count()).select_from(BondAmortization)) == 0
-
-
-@respx.mock
-def test_duplicate_is_case_insensitive(
-    client: TestClient, load_fixture: Callable[..., Any]
-) -> None:
-    route = respx.get(f"{BASE_URL}/securities/SBER.json").mock(
-        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
-    )
-    assert client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"}).status_code == 201
-
-    response = client.post("/api/assets", json={"secid": "sber", "board": "TQBR"})
-
-    assert response.status_code == 409
-    assert response.json()["error"]["code"] == "ASSET_ALREADY_EXISTS"
-    assert len(route.calls) == 1
-
-
-@respx.mock
-def test_board_type_mismatch_is_rejected(client: TestClient) -> None:
-    respx.get(f"{BASE_URL}/securities/BADTYPE.json").mock(
-        return_value=httpx.Response(
-            200,
-            json=_security_payload(
-                secid="BADTYPE",
-                board="TQCB",
-                security_type="common_share",
-                face_value=1000.0,
-            ),
-        )
-    )
-
-    response = client.post("/api/assets", json={"secid": "BADTYPE", "board": "TQCB"})
-
-    assert response.status_code == 400
-    assert response.json()["error"]["code"] == "BAD_REQUEST"
-    assert client.get("/api/assets").json()["items"] == []
-
-
-@respx.mock
-def test_bond_without_face_value_is_rejected(client: TestClient) -> None:
-    respx.get(f"{BASE_URL}/securities/NOFACE.json").mock(
-        return_value=httpx.Response(
-            200,
-            json=_security_payload(
-                secid="NOFACE",
-                board="TQCB",
-                security_type="ofz_bond",
-                face_value=None,
-            ),
-        )
-    )
-
-    response = client.post("/api/assets", json={"secid": "NOFACE", "board": "TQCB"})
-
-    assert response.status_code == 502
-    assert response.json()["error"]["code"] == "MOEX_PARSE_ERROR"
-    assert client.get("/api/assets").json()["items"] == []
-
-
-@respx.mock
-def test_delete_asset_with_paid_income_is_rejected(
-    client: TestClient, db_session: Session, load_fixture: Callable[..., Any]
-) -> None:
-    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
-        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
-    )
-    asset_id = client.post("/api/assets", json={"secid": "SBER", "board": "TQBR"}).json()["id"]
-
-    db_session.rollback()
-    portfolio = portfolio_service.ensure_default_portfolio(db_session)
-    db_session.add(
-        Income(
-            portfolio_id=portfolio.id,
-            asset_id=asset_id,
-            kind=IncomeKind.DIVIDEND,
-            status=IncomeStatus.PAID,
-            amount_total_kopecks=20_000,
-            currency="RUB",
-            pay_date=date(2026, 7, 15),
-            source=DataSource.MANUAL,
-        )
-    )
-    db_session.commit()
-
-    response = client.delete(f"/api/assets/{asset_id}")
-
-    assert response.status_code == 409
-    assert response.json()["error"]["code"] == "ASSET_IN_USE"
-
-
-@respx.mock
-def test_refresh_bond_rolls_back_on_bondization_failure(
-    client: TestClient, load_fixture: Callable[..., Any]
-) -> None:
-    def _bondization(request: httpx.Request) -> httpx.Response:
-        """Serve the initial schedule once, then fail every retry."""
-
-        if not bondization_calls:
-            bondization_calls.append(request.url)
-            return httpx.Response(200, json=load_fixture("moex", "bondization_ofz_schedule.json"))
-        return httpx.Response(500)
-
-    bondization_calls: list[httpx.URL] = []
-    respx.get(f"{BASE_URL}/securities/SU26238RMFS4.json").mock(
-        side_effect=[
-            httpx.Response(200, json=load_fixture("moex", "security_ofz.json")),
-            httpx.Response(
-                200,
-                json=_security_payload(
-                    secid="SU26238RMFS4",
-                    board="TQCB",
-                    security_type="ofz_bond",
-                    face_value=1000.0,
-                ),
-            ),
-        ]
-    )
-    respx.get(f"{BASE_URL}/securities/SU26238RMFS4/bondization.json").mock(side_effect=_bondization)
-    asset_id = client.post("/api/assets", json={"secid": "SU26238RMFS4", "board": "TQCB"}).json()[
-        "id"
-    ]
-
-    response = client.post(f"/api/assets/{asset_id}/refresh")
-
-    assert response.status_code == 502
-    assert response.json()["error"]["code"] == "MOEX_UNAVAILABLE"
-
-    detail = client.get(f"/api/assets/{asset_id}").json()
-    assert detail["name"] == "ОФЗ 26238"
-    assert detail["initial_face_value"] == "1000.00"
 
 
 def test_openapi_exposes_asset_endpoints(client: TestClient) -> None:

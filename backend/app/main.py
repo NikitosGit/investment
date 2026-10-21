@@ -15,6 +15,7 @@ from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging, reset_request_id, set_request_id
 from app.db.session import SessionLocal, engine
+from app.jobs.scheduler import shutdown_scheduler, start_scheduler
 from app.providers.moex.client import MoexClient
 from app.services import portfolio_service
 
@@ -56,10 +57,12 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     _ensure_portfolio()
     moex_client = MoexClient.from_settings(settings)
     application.state.moex = moex_client
+    application.state.scheduler = start_scheduler(settings)
     try:
         yield
     finally:
         logger.info("Shutting down investment tracker")
+        shutdown_scheduler(getattr(application.state, "scheduler", None))
         moex_client.close()
         engine.dispose()
 

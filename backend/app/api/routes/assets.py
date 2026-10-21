@@ -1,10 +1,12 @@
 """Asset endpoints."""
 
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
 from app.api.deps import DbSession, MoexDep
+from app.core.time import today_local
 from app.schemas.asset import (
     AssetCreateIn,
     AssetDetail,
@@ -13,7 +15,7 @@ from app.schemas.asset import (
     AssetSearchItem,
     AssetSearchResponse,
 )
-from app.services import asset_service
+from app.services import asset_service, quote_service
 from app.services.asset_service import AssetCard
 
 router = APIRouter(prefix="/assets", tags=["assets"])
@@ -54,10 +56,16 @@ def search_assets(
     summary="Добавить бумагу из MOEX",
 )
 def create_asset(payload: AssetCreateIn, session: DbSession, client: MoexDep) -> AssetDetail:
-    """Add a security from MOEX, syncing bond coupons and amortizations."""
+    """Add a security from MOEX, syncing bond schedules and cached quotes."""
 
     asset = asset_service.create_from_moex(
         session, client, secid=payload.secid, board=payload.board
+    )
+    quote_service.sync_asset_quotes(
+        session,
+        client,
+        asset,
+        history_from=today_local() - timedelta(days=365),
     )
     return _to_detail(asset_service.get_asset_card(session, asset.id))
 
@@ -71,10 +79,11 @@ def read_asset(asset_id: int, session: DbSession) -> AssetDetail:
 
 @router.post("/{asset_id}/refresh", response_model=AssetDetail, summary="Обновить данные актива")
 def refresh_asset(asset_id: int, session: DbSession, client: MoexDep) -> AssetDetail:
-    """Refresh asset metadata, coupons and amortizations from MOEX."""
+    """Refresh asset metadata, bond schedules and quotes from MOEX."""
 
     asset = asset_service.get_asset(session, asset_id)
     asset_service.refresh_asset(session, client, asset)
+    quote_service.sync_asset_quotes(session, client, asset)
     return _to_detail(asset_service.get_asset_card(session, asset_id))
 
 

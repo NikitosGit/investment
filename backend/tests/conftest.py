@@ -16,6 +16,7 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 _TEST_DATA_DIR = Path(tempfile.mkdtemp(prefix="investment-tracker-tests-"))
 os.environ.setdefault("APP_ENV", "test")
+os.environ["QUOTE_REFRESH_ENABLED"] = "false"
 os.environ["DATABASE_URL"] = f"sqlite:///{(_TEST_DATA_DIR / 'test.db').as_posix()}"
 os.environ["DATA_DIR"] = str(_TEST_DATA_DIR)
 os.environ["BACKUP_DIR"] = str(_TEST_DATA_DIR / "backups")
@@ -23,6 +24,9 @@ os.environ["BACKUP_DIR"] = str(_TEST_DATA_DIR / "backups")
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
+from app.providers.moex.client import MoexClient  # noqa: E402
+
+MOEX_BASE_URL = "https://iss.moex.com/iss"
 
 
 def pytest_sessionfinish(session: object, exitstatus: int) -> None:
@@ -51,6 +55,21 @@ def client() -> Generator[TestClient, None, None]:
 def db_session() -> Generator[Session, None, None]:
     with SessionLocal() as session:
         yield session
+
+
+@pytest.fixture
+def moex_client() -> Generator[MoexClient, None, None]:
+    """Return a MoexClient with retries and throttling disabled for tests."""
+
+    client = MoexClient(
+        MOEX_BASE_URL,
+        retries=0,
+        min_request_interval=0,
+        wait_initial=0,
+        wait_max=0,
+    )
+    yield client
+    client.close()
 
 
 @pytest.fixture

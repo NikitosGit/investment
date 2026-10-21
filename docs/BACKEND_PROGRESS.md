@@ -169,3 +169,31 @@
 - Nit исправлены: docstring `create_manual`, неиспользуемый параметр в тест-хелпере.
 - Повторное ревью: PASS по всем пунктам; новых блокеров нет.
 - Отложено: непокрытые rollback-ветки и кэш-ветка `build_views` (защитный код); N+1/двойной replay при списке доходов; `POST /{id}/mark-paid` требует тело; вопрос включения просроченных купонов в `totals.expected_coupons` (сейчас включаются) — уточнить к этапу 7 (дашборд).
+
+## Этап 6. QuoteService: refresh, history, manual, scheduler — ✅ выполнено
+
+**Реализовано**
+
+- `app/services/quote_service.py`: `refresh_asset`, `backfill_history` (с пагинацией клиента, ограничение 10 лет, старт от последней котировки с перекрытием в 1 день или от первой операции), `refresh_all` (lock, изоляция ошибок по активам, запись `last_quote_refresh_at`/статуса), `add_manual`, `get_history`, `sync_asset_quotes`, `_upsert_quote`.
+- Кэш котировок: одна строка на `(asset_id, quote_date)`; MOEX никогда не перезаписывает `source=MANUAL`; ручная цена перекрывает любую; `price_type` — RUB для акций, PERCENT для облигаций.
+- `app/services/settings_service.py`: key/value `app_setting` (задел под API настроек этапа 8), `last_quote_refresh_at`/`status` (naive UTC).
+- `app/schemas/quote.py`, `app/api/routes/quotes.py`: `GET /api/quotes/{asset_id}/history?period=`, `POST /api/quotes/refresh` (409 `REFRESH_IN_PROGRESS` при параллельном запуске), `POST /api/quotes/manual` (201).
+- `app/jobs/scheduler.py` + `app/jobs/refresh.py`: `BackgroundScheduler`, cron в таймзоне приложения, отложенный стартовый refresh; job не бросает исключений и владеет своим клиентом/сессией; `lifespan` запускает и останавливает планировщик.
+- `GET /api/health`: статус MOEX из последнего refresh (`unknown`/`ok`/`error`).
+- Интеграция с активами: создание и refresh актива best-effort подтягивают текущую цену и историю, сбои MOEX не ломают метаданные (§7.7 шаг 4).
+- Тесты: upsert/защита MANUAL, backfill (граница, первая операция, перекрытие, CLOSE vs интрадей), refresh_all (счётчики, ошибки, lock, скрытие внутренних деталей), история/period, ручные цены, планировщик, health, настройки.
+
+**Проверка**
+
+- `uv run ruff check .` / `ruff format --check .` — чисто.
+- `uv run pytest` — 280 passed.
+- Покрытие: `app/services` — 98% (`quote_service` 98%), `app/core/money.py` — 100%; `app/jobs/refresh.py` — 86%.
+
+**Ревью (независимый агент, 5 осей + повторная проверка исправлений)**
+
+- Critical: нет.
+- Required 1: `refresh_all` сначала дозагружал историю, а затем интрадей-цену — официальный CLOSE за сегодня затирался и больше не исправлялся (`_default_history_start` = last+1). Исправлено: `refresh_asset` вызывается перед `backfill_history`, старт истории — от последней котировки с перекрытием в 1 день; добавлен регресс, что CLOSE перекрывает интрадей, и что строка вчерашней даты перезапрашивается.
+- Required 2: добавлены тесты на ветку «первая операция без котировок» и на защиту/счёт MANUAL при backfill.
+- Optional исправлено: `sync_asset_quotes` не пропускает наружу `SQLAlchemyError` после уже закоммиченного актива; `last_refresh_at` в `/refresh` в локальной таймзоне, как в `/health`; внутренние тексты исключений не утекают в `errors[]`; `updated` задокументировано как число обработанных активов; тест планировщика не запускает реальный job; убран недостижимый код; `QUOTE_REFRESH_ENABLED` в тестах задаётся напрямую.
+- Повторное ревью: PASS по всем пунктам; новых Critical/Required нет.
+- Отложено: непокрыта ветка `refresh_asset` «нет цены» и fallback «нет котировок и операций»; snapshot в ежедневном job — этап 7.
