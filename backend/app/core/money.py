@@ -11,10 +11,10 @@ type Number = Decimal | int | str
 _ONE = Decimal(1)
 _KOPECKS_PER_RUBLE = Decimal(100)
 _MICRO_PER_RUBLE = Decimal(1_000_000)
+_MICRO_PER_KOPECK = Decimal(10_000)
 # face_kopecks * percent_micro / 10_000 == face_rub * percent / 100 * 1_000_000.
 _PERCENT_PRICE_DIVISOR = Decimal(100 * 100)
 _BOND_VALUE_DIVISOR = Decimal(100_000_000)
-_PRICE_TO_KOPECKS_DIVISOR = Decimal(10_000)
 _RATIO_PLACES = Decimal("0.0001")
 
 
@@ -48,6 +48,27 @@ def micro_to_rubles(micro: int) -> Decimal:
     """Convert millionths of a ruble to rubles with six decimal places."""
 
     return (Decimal(micro) / _MICRO_PER_RUBLE).quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+
+
+def micro_to_kopecks(micro: int) -> int:
+    """Convert millionths of a ruble to whole kopecks, rounding half up."""
+
+    return int((Decimal(micro) / _MICRO_PER_KOPECK).quantize(_ONE, rounding=ROUND_HALF_UP))
+
+
+def unit_price_from_total_micro(total_kopecks: int, quantity: int) -> int | None:
+    """Return the per-unit price in millionths derived from a total.
+
+    ``unit = total_rub / quantity``, i.e. ``total_kopecks * 10_000 / quantity``
+    (one kopeck is 10 000 millionths of a ruble), rounded half up.
+    Returns ``None`` for a non-positive quantity because the price is
+    undefined in that case.
+    """
+
+    if quantity <= 0:
+        return None
+    value = Decimal(total_kopecks) * _MICRO_PER_KOPECK / Decimal(quantity)
+    return int(value.quantize(_ONE, rounding=ROUND_HALF_UP))
 
 
 def format_money(kopecks: int) -> str:
@@ -97,7 +118,7 @@ def price_micro_to_percent_micro(price_micro: int, face_value_kopecks: int) -> i
 def quantity_cost_kopecks(quantity: int, price_micro: int) -> int:
     """Return ``quantity * price`` in kopecks, rounding half up."""
 
-    value = Decimal(quantity) * Decimal(price_micro) / _PRICE_TO_KOPECKS_DIVISOR
+    value = Decimal(quantity) * Decimal(price_micro) / _MICRO_PER_KOPECK
     return int(value.quantize(_ONE, rounding=ROUND_HALF_UP))
 
 

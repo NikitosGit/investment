@@ -10,12 +10,14 @@ from app.core.money import (
     format_price,
     format_ratio,
     kopecks_to_rubles,
+    micro_to_kopecks,
     micro_to_rubles,
     percent_price_to_micro,
     price_micro_to_percent_micro,
     quantity_cost_kopecks,
     rubles_to_kopecks,
     rubles_to_micro,
+    unit_price_from_total_micro,
 )
 
 
@@ -82,3 +84,36 @@ def test_format_ratio_uses_four_decimals() -> None:
     assert format_ratio(Decimal("0.1532")) == "0.1532"
     assert format_ratio(Decimal(1) / Decimal(3)) == "0.3333"
     assert format_ratio(Decimal(0)) == "0.0000"
+
+
+@pytest.mark.parametrize(
+    ("micro", "expected"),
+    [
+        (10_000_000, 1_000),
+        (35_400_000, 3_540),
+        (12_345_600, 1_235),
+        (5_000, 1),
+        (4_999, 0),
+        (0, 0),
+    ],
+)
+def test_micro_to_kopecks_rounds_half_up(micro: int, expected: int) -> None:
+    assert micro_to_kopecks(micro) == expected
+
+
+def test_unit_price_from_total() -> None:
+    assert unit_price_from_total_micro(20_000, 20) == 10_000_000
+    assert unit_price_from_total_micro(53_100, 15) == 35_400_000
+    assert unit_price_from_total_micro(20_000, 15) == 13_333_333
+    assert unit_price_from_total_micro(10_000, 3) == 33_333_333
+    assert unit_price_from_total_micro(10_000, 0) is None
+    assert unit_price_from_total_micro(10_000, -1) is None
+
+
+def test_derived_unit_price_converts_back_to_the_same_kopecks() -> None:
+    total = 20_000
+    quantity = 7
+    unit_micro = unit_price_from_total_micro(total, quantity)
+
+    assert unit_micro is not None
+    assert quantity_cost_kopecks(quantity, unit_micro) == total

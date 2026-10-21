@@ -142,3 +142,30 @@
 - Nit исправлен: `_switch_price_type` не пропускает процент, округлившийся в 0.
 - Повторное ревью: PASS по всем пунктам, новых блокеров нет.
 - Отложено: N+1 при оценке позиций (приемлемо для локального MVP); `is_stale` для котировок предыдущих дней — уточнить с фронтендом; `avg_price_percent` после амортизации считается от текущего номинала (display-only).
+
+## Этап 5. IncomeService: купоны, амортизация, mark-paid, дивиденды — ✅ выполнено
+
+**Реализовано**
+
+- `app/services/income_service.py` (+ `income_rules.py`): `list`, `build_views`/`list_income_views`, `create_manual`, `update_income`, `mark_paid`, `delete_income`, `expected_amount`, `current_quantity`, `totals`, `sync_coupons`.
+- `app/schemas/income.py`: контракт §8.6 — деньги строками с 2 знаками (`"10.00"`), `is_overdue`, `totals` (`dividends_paid`, `coupons_paid`, `expected_coupons`), `extra="forbid"`, очистка `record_date`/`note`.
+- `app/api/routes/income.py`: `GET /api/income` (фильтры `status`, `kind`, `asset_id`, `from`, `to`; итоги по портфелю), `POST` (201), `PATCH`, `POST /{id}/mark-paid`, `DELETE` (204).
+- `app/core/money.py`: `micro_to_kopecks` (1 копейка = 10 000 микро), `unit_price_from_total_micro`.
+- Правила: ручные доходы всегда `PAID`/`MANUAL`; `quantity` по умолчанию — текущее количество из replay; для `PAID` сумма (`amount_total`) авторитетна, цена за единицу выводится из неё; `EXPECTED` создаются только синхронизацией MOEX на будущие даты (`pay_date >= today`), `PAID` не перезаписываются; повторный `mark-paid` → 409 `INCOME_ALREADY_PAID`; `sync_coupons` не коммитит (транзакцией владеет вызывающий).
+- Тесты: сервис (ожидаемые суммы, дефолт количества, инварианты PAID, комбинации полей, mark-paid, totals, overdue), API (фильтры, форматы, коды, валидация, OpenAPI), sync через respx (идемпотентность, граница `pay_date == today`, откат транзакции вызывающим).
+
+**Проверка**
+
+- `uv run ruff check .` / `ruff format --check .` — чисто.
+- `uv run pytest` — 243 passed.
+- Покрытие: `app/services` — 98% (`income_rules` 99%, `income_service` 95%), `app/core/money.py` — 100%.
+
+**Ревью (независимый агент, 5 осей + повторная проверка исправлений)**
+
+- Critical: нет.
+- Required 1: `amount_total` у `PAID` мог незаметно переписываться (явный total + per-unit расходились, а PATCH количества пересчитывал сумму). Исправлено: сумма авторитетна, per-unit всегда выводится из неё; PATCH количества сохраняет записанную сумму; обновлены и добавлены тесты на все комбинации полей.
+- Required 2: не было регрессий на просроченные купоны в итогах, на итоги при фильтре и на границу `pay_date == today`. Добавлены; мутанты на `pay_date >= today` и на итоги из отфильтрованного списка падают.
+- Optional исправлено: убран скрытый commit в `sync_coupons`; правка per-unit у MOEX `EXPECTED` отклоняется (400); `ge=0` для количества; `extra="forbid"`; очистка `record_date`/`note`; единая константа микро-в-копейку; переименован параметр `status`.
+- Nit исправлены: docstring `create_manual`, неиспользуемый параметр в тест-хелпере.
+- Повторное ревью: PASS по всем пунктам; новых блокеров нет.
+- Отложено: непокрытые rollback-ветки и кэш-ветка `build_views` (защитный код); N+1/двойной replay при списке доходов; `POST /{id}/mark-paid` требует тело; вопрос включения просроченных купонов в `totals.expected_coupons` (сейчас включаются) — уточнить к этапу 7 (дашборд).
