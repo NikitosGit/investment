@@ -115,3 +115,30 @@
 - Optional: сборка карточки перенесена в сервис; `secid` нормализуется (регистронезависимый дубль, индекс); убран скрытый commit в синхронизации; добавлен OpenAPI smoke-тест и тесты type mismatch/отсутствующего номинала.
 - Повторное ревью: PASS по всем 6 пунктам, новых Critical/Required нет.
 - Отложено осознанно: загрузка текущей цены и истории при добавлении актива (§7.7 шаг 4) — этап 6 (`QuoteService`); N+1 upsert и очистка устаревших EXPECTED при синхронизации — не критичны для MVP.
+
+## Этап 4. OperationService + PositionService + API — ✅ выполнено
+
+**Реализовано**
+
+- `app/core/money.py`: точные Decimal-хелперы `percent_price_to_micro`, `price_micro_to_percent_micro`, `quantity_cost_kopecks`, `bond_market_value_kopecks`, `format_ratio` (ROUND_HALF_UP, без float).
+- `app/services/operation_service.py`: CRUD операций, нормализация цены (акции — только RUB; облигации — RUB/PERCENT, номинал фиксируется на дату сделки), повторный replay всей истории при create/update/delete с rollback; смена только `price_type` сохраняет `price_micro` без изменений; PATCH даты/типа пересчитывает цену; 409 `INSUFFICIENT_QUANTITY` для запрещённых продаж.
+- `app/services/position_service.py`: `PositionState`/`PositionView`, replay по `(trade_date, id)`, пропорциональное списание себестоимости, средняя цена, оценка по последней котировке (`PERCENT` для облигаций MOEX и `RUB` для ручных), cost-fallback (`price_source="COST"`, `is_stale=true`), доли от итоговой стоимости портфеля.
+- `app/services/quote_service.py`: read-only `get_last_quote` (последняя котировка `<= on_date`); refresh/backfill/ручные котировки — этап 6.
+- `app/schemas/operation.py`, `app/schemas/position.py`: контракты §8.4/§8.5, деньги и цены строками (2 и 6 знаков).
+- `app/api/routes/operations.py`: `GET/POST/PATCH/DELETE /api/operations`; `app/api/routes/positions.py`: `GET /api/positions`.
+- Тесты: replay-математика, продажа больше остатка, обратные даты, облигации (%, RUB, амортизация), cost-fallback, доли, API-контракты, OpenAPI.
+
+**Проверка**
+
+- `uv run ruff check .` / `ruff format --check .` — чисто.
+- `uv run pytest` — 155 passed.
+- Покрытие: `app/services` — 97%, `app/core/money.py` — 100%, суммарно 98%.
+
+**Ревью (независимый агент, 5 осей + повторная проверка исправлений)**
+
+- Critical/Required дефектов кода нет.
+- Required (тесты): добавлены регрессии на PATCH даты SELL до BUY и смены BUY→SELL без остатка (409 + неизменная история); тест оценки облигации с амортизацией (котировка до амортизации оценивается по номиналу на дату котировки, после — по новому номиналу).
+- Optional исправлено: оценка облигации учитывает `quote.price_type`; `share` в `get_position` считается от итогов портфеля, а не всегда 1; смена только `price_type` сохраняет нормализованную цену; понятная ошибка для PERCENT у акций; guard-тесты на округление процента в 0 и полностью амортизированный номинал.
+- Nit исправлен: `_switch_price_type` не пропускает процент, округлившийся в 0.
+- Повторное ревью: PASS по всем пунктам, новых блокеров нет.
+- Отложено: N+1 при оценке позиций (приемлемо для локального MVP); `is_stale` для котировок предыдущих дней — уточнить с фронтендом; `avg_price_percent` после амортизации считается от текущего номинала (display-only).
