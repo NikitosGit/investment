@@ -67,20 +67,7 @@ def calculate_position(asset_id: int, operations: Sequence[Operation]) -> Positi
     cost_kopecks = 0
 
     for operation in ordered:
-        if operation.type is OperationType.BUY:
-            quantity += operation.quantity
-            cost_kopecks += quantity_cost_kopecks(operation.quantity, operation.price_micro)
-            continue
-
-        _ensure_can_sell(asset_id, operation, available=quantity)
-        if operation.quantity == quantity:
-            # Full close: the whole cost basis is released exactly.
-            cost_kopecks = 0
-        else:
-            cost_kopecks -= _sale_cost_kopecks(cost_kopecks, operation.quantity, quantity)
-        quantity -= operation.quantity
-        if quantity == 0:
-            cost_kopecks = 0
+        quantity, cost_kopecks = apply_operation(asset_id, quantity, cost_kopecks, operation)
 
     return PositionState(
         asset_id=asset_id,
@@ -90,25 +77,63 @@ def calculate_position(asset_id: int, operations: Sequence[Operation]) -> Positi
     )
 
 
-def load_operations(session: Session, asset_id: int) -> list[Operation]:
-    """Return all operations of an asset ordered by ``trade_date`` and ``id``."""
+def apply_operation(
+    asset_id: int,
+    quantity: int,
+    cost_kopecks: int,
+    operation: Operation,
+) -> tuple[int, int]:
+    """Apply one operation to a running position (plan §6.1).
 
-    statement = (
-        select(Operation)
-        .where(Operation.asset_id == asset_id)
-        .order_by(Operation.trade_date, Operation.id)
-    )
+    Returns the new ``(quantity, cost_kopecks)`` pair. The cost release of a
+    sale is proportional and rounded half up; a full close resets the cost to
+    zero. Selling more than is available raises ``INSUFFICIENT_QUANTITY``.
+    """
+
+    if operation.type is OperationType.BUY:
+        new_quantity = quantity + operation.quantity
+        new_cost = cost_kopecks + quantity_cost_kopecks(operation.quantity, operation.price_micro)
+        return new_quantity, new_cost
+
+    _ensure_can_sell(asset_id, operation, available=quantity)
+    if operation.quantity == quantity:
+        # Full close: the whole cost basis is released exactly.
+        new_cost = 0
+    else:
+        new_cost = cost_kopecks - _sale_cost_kopecks(cost_kopecks, operation.quantity, quantity)
+    new_quantity = quantity - operation.quantity
+    if new_quantity == 0:
+        new_cost = 0
+    return new_quantity, new_cost
+
+
+def load_operations(
+    session: Session,
+    asset_id: int,
+    on_date: date | None = None,
+) -> list[Operation]:
+    """Return operations of an asset ordered by ``trade_date`` and ``id``.
+
+    With ``on_date`` only operations effective on that date are returned, so
+    callers can replay the position as of today. The default keeps the full
+    history, which is required for validating future-dated trades.
+    """
+
+    statement = select(Operation).where(Operation.asset_id == asset_id)
+    if on_date is not None:
+        statement = statement.where(Operation.trade_date <= on_date)
+    statement = statement.order_by(Operation.trade_date, Operation.id)
     return list(session.scalars(statement))
 
 
 def validate_operation_sequence(session: Session, asset_id: int) -> PositionState:
-    """Replay the stored history of an asset and raise if it is inconsistent."""
+    """Replay the full stored history and raise if it is inconsistent."""
 
     return calculate_position(asset_id, load_operations(session, asset_id))
 
 
 def get_position(session: Session, asset_id: int) -> PositionView:
-    """Return the position of one asset, including fully closed positions.
+    """Return the position of one asset as of today, including closed ones.
 
     The share is computed against the market value of all open positions, so
     an asset card shows the same fraction as the positions list.
@@ -116,7 +141,7 @@ def get_position(session: Session, asset_id: int) -> PositionView:
 
     asset = asset_service.get_asset(session, asset_id)
     today = today_local()
-    state = calculate_position(asset_id, load_operations(session, asset_id))
+    state = calculate_position(asset_id, load_operations(session, asset_id, on_date=today))
     view = _build_view(session, asset, state, today)
     if state.quantity <= 0:
         return replace(view, share=Decimal(0))
@@ -126,7 +151,7 @@ def get_position(session: Session, asset_id: int) -> PositionView:
 
 
 def get_positions(session: Session) -> list[PositionView]:
-    """Return all open positions with shares based on the portfolio total."""
+    """Return all open positions as of today with shares based on the total."""
 
     views = _open_views(session, today_local())
     total_market_value = sum(view.market_value_kopecks for view in views)
@@ -147,7 +172,7 @@ def _open_views(session: Session, today: date) -> list[PositionView]:
         asset = session.get(Asset, asset_id)
         if asset is None:
             continue
-        state = calculate_position(asset_id, load_operations(session, asset_id))
+        state = calculate_position(asset_id, load_operations(session, asset_id, on_date=today))
         if state.quantity <= 0:
             continue
         views.append(_build_view(session, asset, state, today))
@@ -193,6 +218,26 @@ def _share(market_value_kopecks: int, total_kopecks: int) -> Decimal:
     )
 
 
+def market_value_kopecks(
+    asset: Asset,
+    quantity: int,
+    *,
+    price_type: PriceType,
+    price_micro: int,
+    face_value_kopecks: int | None,
+) -> int:
+    """Return the market value of a position at a given price (plan §6.4).
+
+    Stocks and bond quotes expressed in rubles are valued as
+    ``quantity * price``. A bond quote in percent refers to the face value on
+    the quote date. ``face_value_kopecks`` is ignored in the ruble branch.
+    """
+
+    if asset.type is AssetType.BOND and price_type is PriceType.PERCENT:
+        return bond_market_value_kopecks(quantity, face_value_kopecks or 0, price_micro)
+    return quantity_cost_kopecks(quantity, price_micro)
+
+
 def _build_view(session: Session, asset: Asset, state: PositionState, today: date) -> PositionView:
     """Attach price and valuation information to a position state (plan §6.4)."""
 
@@ -203,22 +248,20 @@ def _build_view(session: Session, asset: Asset, state: PositionState, today: dat
     quote = quote_service.get_last_quote(session, asset.id, on_date=today)
 
     if quote is not None:
-        if is_bond and quote.price_type is PriceType.RUB:
-            # Manual ruble quote for a bond: the price is already per unit.
-            market_value = quantity_cost_kopecks(state.quantity, quote.price_micro)
-            price_type = PriceType.RUB
-        elif is_bond:
+        price_type = quote.price_type if is_bond else PriceType.RUB
+        valuation_face = None
+        if is_bond and price_type is PriceType.PERCENT:
             # The quoted percent refers to the face value on the quote date.
             valuation_face = bondization_service.current_face_value_kopecks(
                 session, asset, quote.quote_date
             )
-            market_value = bond_market_value_kopecks(
-                state.quantity, valuation_face or 0, quote.price_micro
-            )
-            price_type = PriceType.PERCENT
-        else:
-            market_value = quantity_cost_kopecks(state.quantity, quote.price_micro)
-            price_type = PriceType.RUB
+        market_value = market_value_kopecks(
+            asset,
+            state.quantity,
+            price_type=price_type,
+            price_micro=quote.price_micro,
+            face_value_kopecks=valuation_face,
+        )
         return PositionView(
             asset=asset,
             state=state,

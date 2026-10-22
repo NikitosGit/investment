@@ -54,6 +54,18 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
+Если `uv` не в PATH, те же команды запускаются через `python -m uv ...`.
+
+## Реализованные endpoint-ы
+
+- Служебные: `GET /api/health`.
+- Портфель: `GET/PATCH /api/portfolio`.
+- Активы: `GET/POST /api/assets`, `GET /api/assets/search`, `GET /api/assets/{id}`, `POST /api/assets/{id}/refresh`, `DELETE /api/assets/{id}`.
+- Операции и позиции: `GET/POST/PATCH/DELETE /api/operations`, `GET /api/positions`.
+- Доходы: `GET/POST/PATCH/DELETE /api/income`, `POST /api/income/{id}/mark-paid`.
+- Котировки: `GET /api/quotes/{asset_id}/history`, `POST /api/quotes/refresh`, `POST /api/quotes/manual`.
+- Дашборд и история: `GET /api/dashboard?period=1Y`, `GET /api/snapshots?period=1Y`.
+
 ## Миграции
 
 ```bash
@@ -79,6 +91,6 @@ uv run alembic upgrade head
 | 4. Операции и позиции | ✅ готово |
 | 5. Доходы | ✅ готово |
 | 6. Котировки и планировщик | ✅ готово |
-| 7. Дашборд и snapshots | ⏳ |
+| 7. Дашборд и snapshots | ✅ готово |
 | 8. Настройки, backup, export | ⏳ |
 | 9. Тесты, OpenAPI, README, seed | ⏳ |

@@ -329,9 +329,13 @@ def expected_amount(income: Income, current_quantity: int) -> int:
 
 
 def current_quantity(session: Session, asset_id: int) -> int:
-    """Replay the operation history of an asset and return its quantity."""
+    """Replay the operation history of an asset as of today and return quantity.
 
-    operations = position_service.load_operations(session, asset_id)
+    Future-dated operations are excluded: a scheduled trade must not change
+    the quantity used for expected coupons before it happens.
+    """
+
+    operations = position_service.load_operations(session, asset_id, on_date=today_local())
     return position_service.calculate_position(asset_id, operations).quantity
 
 

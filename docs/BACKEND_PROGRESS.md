@@ -197,3 +197,40 @@
 - Optional исправлено: `sync_asset_quotes` не пропускает наружу `SQLAlchemyError` после уже закоммиченного актива; `last_refresh_at` в `/refresh` в локальной таймзоне, как в `/health`; внутренние тексты исключений не утекают в `errors[]`; `updated` задокументировано как число обработанных активов; тест планировщика не запускает реальный job; убран недостижимый код; `QUOTE_REFRESH_ENABLED` в тестах задаётся напрямую.
 - Повторное ревью: PASS по всем пунктам; новых Critical/Required нет.
 - Отложено: непокрыта ветка `refresh_asset` «нет цены» и fallback «нет котировок и операций»; snapshot в ежедневном job — этап 7.
+
+## Этап 7. DashboardService + snapshots — ✅ выполнено
+
+**Реализовано**
+
+- `app/services/dashboard_service.py`: `get_dashboard`, `compute_series`, `value_on_date`, `DASHBOARD_PERIOD_DAYS` (`1M`/`3M`/`1Y`/`ALL`); таймлайн операций/активов/котировок/амортизаций загружается bulk-запросами, ряд строится по дням с последней известной котировкой, облигация в `PERCENT` оценивается по номиналу на дату котировки, при отсутствии цены — cost-fallback и `is_partial` на точку.
+- Итоги: `market_value`/`invested` по открытым позициям, `dividends_paid`/`coupons_paid`, `income_paid_total`, `expected_coupons` (просроченные включены), `positions_count`, `assets_count`.
+- Ближайшие купоны: `EXPECTED` с `pay_date >= today` и текущим количеством > 0, сортировка `(pay_date, id)`; просроченные в список не попадают, но входят в итоговый `expected_coupons`.
+- Семантика текущего состояния: позиции, карточка актива, количество для ожидаемых купонов и текущие итоги дашборда replay-ят операции с `trade_date <= today`; валидация записи операций по-прежнему replay-ит всю историю, поэтому будущие сделки остаются допустимыми.
+- `app/services/snapshot_service.py`: `compute_for_date`, `compute_and_store`, `upsert_snapshot` (атомарный SQLite upsert с сохранением `created_at`, только flush), `get_snapshots` (фильтр периода, верхняя граница — сегодня).
+- `app/schemas/dashboard.py`, `app/schemas/snapshot.py`; `GET /api/dashboard?period=1Y`; диагностический `GET /api/snapshots?period=1Y`.
+- Ежедневный job после успешного обновления котировок считает и коммитит snapshot на сегодня; сбой snapshot откатывается/логируется и не ломает обновление котировок; при `REFRESH_IN_PROGRESS` запуск пропускается.
+- Общий хелпер оценки `position_service.market_value_kopecks`; общий replay `apply_operation`; чистые `bondization_service.face_value_from_amortized` / `face_value_on`.
+- Тесты: итоги/ряд/API/snapshot/job, границы future/today, амортизация облигаций, fallback без котировок, пустой портфель, границы периода и snapshot, AST-guard на float-литералы.
+
+**Проверка**
+
+- `python -m uv run ruff check .` / `ruff format --check .` — чисто.
+- `python -m uv run pytest` — 345 passed.
+- Покрытие: общее 97%; новые dashboard/snapshot-модули и `bondization_service.py` — 100%; `position_service.py` — 97%, `income_service.py` — 96%, `jobs/refresh.py` — 88%.
+
+**Ревью (независимый агент, 5 осей + повторные проверки)**
+
+- Required 1: будущие операции расходились с дашбордом/рядом/snapshot, а будущий SELL мог скрыть сегодняшнюю позицию и купоны. Исправлено replay-ем текущего состояния на `today` при сохранении полной истории для валидации записи; добавлены регрессии future BUY/SELL/future-only.
+- Required 2: отсутствовала граница `pay_date == today` — добавлена (купон входит в ближайшие и в ожидаемые; `today - 1` не входит в ближайшие, но входит в ожидаемые).
+- Required 3 (тесты): мутации границы «сегодня» выживали (фильтр операций, фильтры амортизации) — добавлены тесты на BUY/SELL сегодня и согласованность котировки/амортизации на ту же дату; ревьюер подтвердил, что мутации теперь падают.
+- Optional исправлено: общий хелпер оценки + table-driven тест согласованности; атомарный snapshot upsert; возвращён SQL `SUM` для номинала; реальный id портфеля; граница snapshot в 30 дней; общий `DashboardPeriod`; общий тестовый builder; AST-guard на float; проверка, что snapshot действительно вызывается.
+- Отложено: тройной replay/N+1 в дашборде (приемлемо для локального MVP); `is_partial` snapshot не хранится (нет колонки); итоги выплат в дашборде всевременные, а `income_paid` snapshot ограничен `pay_date <= date` (будущие `PAID` могут расходиться); `assets_count` считает все активы; ряд начинается с первой операции, а не с начала периода; плановый snapshot пропускается, если ручной refresh держит lock в момент job.
+
+**Отложено**
+
+- Тройной replay/N+1 в дашборде — приемлемо для локального MVP.
+- `is_partial` snapshot не хранится: в таблице нет колонки.
+- Итоги выплат в дашборде всевременные, а `income_paid` snapshot ограничен `pay_date <= date`; будущие `PAID` могут расходиться.
+- `assets_count` считает все активы, а не только с открытыми позициями.
+- Ряд начинается с первой операции, а не с начала периода.
+- Плановый snapshot пропускается, если ручной refresh держит lock в момент job.

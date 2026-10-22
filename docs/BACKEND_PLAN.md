@@ -173,6 +173,7 @@ backend/
 │   │   ├── position.py
 │   │   ├── income.py
 │   │   ├── dashboard.py
+│   │   ├── snapshot.py
 │   │   ├── quote.py
 │   │   └── settings.py
 │   ├── api/
@@ -186,6 +187,7 @@ backend/
 │   │       ├── positions.py
 │   │       ├── income.py
 │   │       ├── dashboard.py
+│   │       ├── snapshots.py
 │   │       ├── quotes.py
 │   │       ├── settings.py
 │   │       └── backup.py
@@ -477,6 +479,8 @@ PRAGMA synchronous=NORMAL;
 3. Если `qty = 0`: `avg = 0`, `cost = 0`.
 4. Иначе `avg = cost_kopecks / 100 / qty`.
 
+Текущее состояние (позиции, карточка актива, количество для ожидаемых купонов, итоги дашборда) считается на `today`: replay включает только операции с `trade_date <= today`, поэтому будущие сделки не меняют текущие значения. Валидация записи операций (§6.2) по-прежнему replay-ит всю историю, чтобы будущие сделки оставались допустимыми.
+
 Округление:
 
 - `cost_kopecks` — целое.
@@ -575,7 +579,7 @@ percent = price_micro / 1_000_000 / face_value_rub × 100
 - `coupons_paid` — сумма `PAID` с `kind=COUPON`.
 - `income_paid_total = dividends_paid + coupons_paid`.
 - `expected_coupons` — сумма `EXPECTED` купонов с `current_qty > 0`.
-- `positions_count`, `assets_count`.
+- `positions_count`, `assets_count` (`assets_count` — все активы, включая закрытые позиции).
 
 График:
 
@@ -585,15 +589,23 @@ percent = price_micro / 1_000_000 / face_value_rub × 100
   - цена — последняя известная цена <= даты;
   - стоимость — сумма по активам.
 - Если по активу нет цены до даты, использовать себестоимость и пометить точку как частичную.
-- Ответ содержит `series: [{date, market_value, invested}]`.
+- Ответ содержит `series: [{date, market_value, invested, is_partial}]`; верхнеуровневый `is_partial=true`, если хотя бы одна точка ряда оценена по себестоимости.
+- Ряд начинается с `max(начало периода, дата первой операции)`, а не с начала периода.
 - `invested` на дату — себестоимость открытых позиций на дату.
+
+Ближайшие купоны:
+
+- `EXPECTED` купоны с `pay_date >= today` и текущим количеством > 0, сортировка `(pay_date, id)`.
+- Просроченные купоны (`pay_date < today`) в список не попадают, но входят в итоговый `expected_coupons`.
 
 ### 6.8 Snapshot
 
-- Ежедневный job после обновления котировок считает snapshot на сегодня.
-- Upsert по `(portfolio_id, snapshot_date)`.
-- Используется для истории и диагностики.
+- Ежедневный job после обновления котировок считает snapshot на сегодня. Шаг выполняется после успешного refresh; его сбой откатывается и логируется, не отменяя обновление котировок.
+- Upsert по `(portfolio_id, snapshot_date)` (атомарный SQLite upsert, `created_at` сохраняется).
+- `income_paid` суммируется по `PAID` доходам с `pay_date <= snapshot_date`.
+- Используется для истории и диагностики; snapshots ограничены датой «сегодня».
 - Dashboard может брать готовые snapshots, но при их отсутствии считает на лету.
+- Диагностический `GET /api/snapshots?period=` возвращает сохранённые snapshots за период.
 
 ## 7. Интеграция с MOEX ISS
 
@@ -1059,6 +1071,9 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 | Метод | Путь | Назначение |
 |---|---|---|
 | `GET` | `/api/dashboard?period=1Y` | Итоги, позиции, график, ближайшие купоны |
+| `GET` | `/api/snapshots?period=1Y` | Сохранённые дневные snapshot-ы за период (диагностика) |
+
+Неподдерживаемый `period` → `422` (валидация query-параметра).
 
 Ответ:
 
@@ -1074,14 +1089,42 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
     "coupons_paid": "525.00",
     "income_paid_total": "725.00",
     "expected_coupons": "525.00",
-    "positions_count": 2
+    "positions_count": 2,
+    "assets_count": 3
   },
   "series": [
-    { "date": "2026-01-10", "market_value": "1000.00", "invested": "1000.00" },
-    { "date": "2026-01-11", "market_value": "1010.00", "invested": "1000.00" }
+    {
+      "date": "2026-01-10",
+      "market_value": "1000.00",
+      "invested": "1000.00",
+      "is_partial": false
+    },
+    {
+      "date": "2026-01-11",
+      "market_value": "1010.00",
+      "invested": "1000.00",
+      "is_partial": false
+    }
   ],
   "positions": [],
-  "upcoming_coupons": []
+  "upcoming_coupons": [],
+  "is_partial": false
+}
+```
+
+`GET /api/snapshots?period=1Y`:
+
+```json
+{
+  "period": "1Y",
+  "items": [
+    {
+      "date": "2026-10-19",
+      "market_value": "20985.00",
+      "invested": "16468.45",
+      "income_paid": "725.00"
+    }
+  ]
 }
 ```
 
@@ -1335,6 +1378,10 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - Округление до копейки.
 - Dashboard series: количество на дату, последняя цена.
 - Fallback на себестоимость при отсутствии цены.
+- Dashboard totals: открытые позиции, выплаты, ожидаемые купоны, `assets_count`.
+- Snapshot: расчёт/идемпотентный upsert, период и верхняя граница «сегодня».
+- Будущие операции не меняют текущие позиции/итоги, но участвуют в валидации записи.
+- Границы «сегодня»: `pay_date == today` и операции/котировки/амортизация на текущую дату.
 
 ### Provider (MOEX)
 
@@ -1354,6 +1401,7 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - Подтверждение купона.
 - Ручной дивиденд.
 - Dashboard.
+- Snapshots.
 - Backup/export.
 - Удаление актива с операциями → 409.
 - Повторное добавление актива → 409.
@@ -1572,7 +1620,7 @@ Backend реализуется первым и заканчивается ста
 - [x] Этап 4. OperationService + PositionService + API
 - [x] Этап 5. IncomeService: купоны, амортизация, mark-paid, дивиденды
 - [x] Этап 6. QuoteService: refresh, history, manual, scheduler
-- [ ] Этап 7. DashboardService + snapshots
+- [x] Этап 7. DashboardService + snapshots
 - [ ] Этап 8. Settings, backup, export
 - [ ] Этап 9. Тесты, OpenAPI, README, seed demo
 

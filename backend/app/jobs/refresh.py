@@ -10,13 +10,13 @@ from app.core.config import get_settings
 from app.core.errors import AppError, ErrorCode
 from app.db.session import SessionLocal
 from app.providers.moex.client import MoexClient
-from app.services import quote_service
+from app.services import quote_service, snapshot_service
 
 logger = logging.getLogger(__name__)
 
 
 def run_daily_refresh() -> None:
-    """Refresh all quotes and record the outcome. Never raises."""
+    """Refresh all quotes and record today's snapshot. Never raises."""
 
     client: MoexClient | None = None
     try:
@@ -38,6 +38,15 @@ def run_daily_refresh() -> None:
             )
             for error in result.errors:
                 logger.warning("Quote refresh error for %s: %s", error.secid, error.error)
+
+            # The quote refresh is already committed; a snapshot failure must
+            # not invalidate it.
+            try:
+                snapshot_service.compute_and_store(session)
+                session.commit()
+            except Exception:
+                session.rollback()
+                logger.exception("Daily snapshot failed")
     except Exception:
         logger.exception("Daily quote refresh failed")
     finally:

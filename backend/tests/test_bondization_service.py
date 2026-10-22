@@ -106,6 +106,26 @@ def test_current_face_value_is_none_for_stock(db_session: Session) -> None:
     )
 
 
+def test_pure_face_value_helpers_return_none_for_stock(db_session: Session) -> None:
+    asset = _create_asset(db_session, asset_type=AssetType.STOCK, face_value_kopecks=None)
+
+    assert bondization_service.face_value_from_amortized(asset, 20_000) is None
+    assert bondization_service.face_value_on(asset, [], date(2026, 1, 1)) is None
+
+
+def test_face_value_on_includes_amortization_on_the_date(db_session: Session) -> None:
+    asset = _create_asset(db_session)
+    amortization = BondAmortization(
+        asset_id=asset.id,
+        amortization_date=date(2026, 3, 1),
+        amount_per_unit_kopecks=20_000,
+        source=DataSource.MANUAL,
+    )
+
+    assert bondization_service.face_value_on(asset, [amortization], date(2026, 2, 28)) == 100_000
+    assert bondization_service.face_value_on(asset, [amortization], date(2026, 3, 1)) == 80_000
+
+
 def test_sync_is_idempotent(db_session: Session, fixed_today: date, portfolio_id: int) -> None:
     asset = _create_asset(db_session)
     schedule = Bondization(

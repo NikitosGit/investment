@@ -5,6 +5,7 @@ Coupons and amortizations fetched from MOEX are upserted by a stable
 never overwritten by a synchronization.
 """
 
+from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy import func, select
@@ -103,6 +104,37 @@ def _sync_coupons(
             existing.pay_date = coupon.pay_date
 
 
+def face_value_from_amortized(asset: Asset, amortized_kopecks: int) -> int | None:
+    """Return the face value after subtracting amortization, clamped at zero.
+
+    Stocks have no face value and return ``None``. This pure helper is shared
+    by the per-date schedule replay and the SQL aggregate path.
+    """
+
+    if asset.type is not AssetType.BOND or asset.initial_face_value_kopecks is None:
+        return None
+    return max(asset.initial_face_value_kopecks - amortized_kopecks, 0)
+
+
+def face_value_on(
+    asset: Asset,
+    amortizations: Sequence[BondAmortization],
+    on_date: date,
+) -> int | None:
+    """Return the face value on a date from a preloaded amortization schedule.
+
+    This is a pure helper so callers that already hold the schedule (for
+    example the dashboard series) avoid a query per date.
+    """
+
+    amortized = sum(
+        amortization.amount_per_unit_kopecks
+        for amortization in amortizations
+        if amortization.amortization_date <= on_date
+    )
+    return face_value_from_amortized(asset, amortized)
+
+
 def current_face_value_kopecks(session: Session, asset: Asset, on_date: date) -> int | None:
     """Return the face value on ``on_date`` after amortization, or None for stocks."""
 
@@ -115,7 +147,7 @@ def current_face_value_kopecks(session: Session, asset: Asset, on_date: date) ->
             BondAmortization.amortization_date <= on_date,
         )
     )
-    return max(asset.initial_face_value_kopecks - int(amortized or 0), 0)
+    return face_value_from_amortized(asset, int(amortized or 0))
 
 
 def list_amortizations(session: Session, asset_id: int) -> list[BondAmortization]:
