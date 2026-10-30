@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+
+.error-state {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-3);
+  padding: var(--app-space-4) var(--app-space-5);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--app-radius-md);
+}
+
+.error-state__icon {
+  color: var(--app-danger);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.error-state__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-state__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.error-state__message {
+  margin: var(--app-space-1) 0 0;
+  color: var(--app-text-muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .error-state {
+    flex-wrap: wrap;
+  }
+}

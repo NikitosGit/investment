@@ -1,0 +1,23 @@
+<div class="loading-skeleton" role="status" aria-live="polite" aria-busy="true">
+  <span class="visually-hidden">Загрузка данных…</span>
+
+  @if (cardItems().length > 0) {
+    <div class="loading-skeleton__cards">
+      @for (card of cardItems(); track $index) {
+        <div class="loading-skeleton__card">
+          <p-skeleton width="45%" height="0.9rem" />
+          <p-skeleton width="70%" height="1.75rem" />
+          <p-skeleton width="55%" height="0.8rem" />
+        </div>
+      }
+    </div>
+  }
+
+  @if (rowItems().length > 0) {
+    <div class="loading-skeleton__rows">
+      @for (row of rowItems(); track $index) {
+        <p-skeleton height="2.25rem" borderRadius="6px" />
+      }
+    </div>
+  }
+</div>

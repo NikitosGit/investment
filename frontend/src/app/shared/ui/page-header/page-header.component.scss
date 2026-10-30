@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+  margin-bottom: var(--app-space-5);
+}
+
+.page-header__text {
+  min-width: 0;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.page-header__subtitle {
+  margin-top: var(--app-space-1);
+  color: var(--app-text-muted);
+  max-width: 70ch;
+}
+
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-2);
+}

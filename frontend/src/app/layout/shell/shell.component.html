@@ -1,0 +1,73 @@
+<header class="shell__header">
+  <div class="shell__bar container">
+    <a class="shell__brand" routerLink="/dashboard" (click)="closeMenu()">
+      <span class="shell__brand-mark" aria-hidden="true">
+        <i class="pi pi-chart-line"></i>
+      </span>
+      <span class="shell__brand-text">Учет инвестиций</span>
+    </a>
+
+    <div class="shell__actions">
+      <span class="shell__health" [attr.title]="healthTooltip() || null">
+        <p-tag
+          [value]="healthPresentation().label"
+          [severity]="healthPresentation().severity"
+          [icon]="healthPresentation().icon"
+          [rounded]="true"
+        />
+      </span>
+
+      <button
+        type="button"
+        class="shell__menu-button"
+        [attr.aria-expanded]="menuOpen()"
+        [attr.aria-label]="menuOpen() ? 'Закрыть меню навигации' : 'Открыть меню навигации'"
+        aria-controls="mobile-menu"
+        (click)="toggleMenu()"
+      >
+        <i [class]="menuOpen() ? 'pi pi-times' : 'pi pi-bars'" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  @if (menuOpen()) {
+    <div class="shell__backdrop" (click)="closeMenu()" aria-hidden="true"></div>
+
+    <div id="mobile-menu" class="shell__mobile">
+      <nav aria-label="Мобильная навигация">
+        @for (item of navItems; track item.path) {
+          <a
+            class="app-nav-link shell__mobile-link"
+            [routerLink]="item.path"
+            [class.is-active]="isActive(item.section)"
+            [attr.aria-current]="isActive(item.section) ? 'page' : null"
+            [attr.data-section]="item.section"
+            (click)="closeMenu()"
+          >
+            <i [class]="'shell__mobile-icon ' + item.icon" aria-hidden="true"></i>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+    </div>
+  }
+</header>
+
+<div class="shell__body container">
+  <app-sidebar class="shell__sidebar" [items]="navItems" [active]="activeSection()" />
+
+  <main class="shell__main">
+    <router-outlet />
+  </main>
+</div>
+
+<footer class="shell__footer">
+  <div class="container shell__footer-content">
+    <span>Учет инвестиций @if (version()) { v{{ version() }} }</span>
+    <span class="shell__footer-separator" aria-hidden="true">·</span>
+    <span>локальный сервер 127.0.0.1</span>
+  </div>
+</footer>
+
+<p-toast position="top-right" />
+<p-confirm-dialog />

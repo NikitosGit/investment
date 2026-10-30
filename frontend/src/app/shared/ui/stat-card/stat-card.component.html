@@ -1,0 +1,14 @@
+<article [class]="'stat-card stat-card--' + severity()">
+  <div class="stat-card__head">
+    <span class="stat-card__label">{{ label() }}</span>
+    @if (icon()) {
+      <i class="stat-card__icon" [class]="icon()" aria-hidden="true"></i>
+    }
+  </div>
+
+  <p class="stat-card__value mono">{{ value() }}</p>
+
+  @if (hint()) {
+    <p class="stat-card__hint">{{ hint() }}</p>
+  }
+</article>

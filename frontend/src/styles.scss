@@ -1,0 +1,245 @@
+@import 'primeicons/primeicons.css';
+
+/* ---------------------------------------------------------------------------
+ * Design tokens
+ * ------------------------------------------------------------------------ */
+:root {
+  color-scheme: light only;
+
+  --app-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --app-font-size: 16px;
+  --app-line-height: 1.55;
+
+  --app-bg: #f4f6f8;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8fafc;
+  --app-border: #e2e8f0;
+  --app-border-strong: #cbd5e1;
+
+  --app-text: #1f2937;
+  --app-text-muted: #5f6b7a;
+  --app-text-inverse: #ffffff;
+
+  --app-primary: #0f766e;
+  --app-primary-hover: #115e59;
+  --app-primary-soft: #ccfbf1;
+
+  --app-success: #15803d;
+  --app-warning: #b45309;
+  --app-danger: #b91c1c;
+  --app-info: #1d4ed8;
+
+  --app-radius-sm: 6px;
+  --app-radius-md: 10px;
+  --app-radius-lg: 16px;
+
+  --app-space-1: 4px;
+  --app-space-2: 8px;
+  --app-space-3: 12px;
+  --app-space-4: 16px;
+  --app-space-5: 24px;
+  --app-space-6: 32px;
+  --app-space-7: 48px;
+
+  --app-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --app-shadow-md: 0 6px 20px rgba(15, 23, 42, 0.08);
+
+  --app-header-height: 64px;
+  --app-content-max-width: 1240px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Reset
+ * ------------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: var(--app-font-size);
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--app-font-family);
+  font-size: 1rem;
+  line-height: var(--app-line-height);
+  color: var(--app-text);
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.375rem;
+}
+
+h3 {
+  font-size: 1.125rem;
+}
+
+a {
+  color: var(--app-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--app-primary-hover);
+  text-decoration: underline;
+}
+
+img,
+svg {
+  max-width: 100%;
+  display: block;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+code,
+pre {
+  font-family: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+}
+
+/* ---------------------------------------------------------------------------
+ * Accessibility
+ * ------------------------------------------------------------------------ */
+:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.45);
+  outline-offset: 2px;
+  border-radius: var(--app-radius-sm);
+}
+
+.p-button:focus-visible,
+.p-selectbutton .p-button:focus-visible,
+a:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.45);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Layout helpers
+ * ------------------------------------------------------------------------ */
+.container {
+  width: 100%;
+  max-width: var(--app-content-max-width);
+  margin: 0 auto;
+  padding: 0 var(--app-space-5);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+}
+
+.grid-auto {
+  display: grid;
+  gap: var(--app-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.text-muted {
+  color: var(--app-text-muted);
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .container {
+    padding: 0 var(--app-space-4);
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 721px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+/* Shared active state for sidebar and mobile navigation links. */
+.app-nav-link.is-active {
+  color: var(--app-primary);
+  background: var(--app-primary-soft);
+}
+
+/* ---------------------------------------------------------------------------
+ * PrimeNG adjustments (light Aura only)
+ * ------------------------------------------------------------------------ */
+.p-toast {
+  max-width: calc(100vw - 2rem);
+}
+
+.p-confirmdialog {
+  max-width: min(520px, calc(100vw - 2rem));
+}
+
+.p-card {
+  box-shadow: var(--app-shadow-sm);
+}

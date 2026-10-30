@@ -1,0 +1,14 @@
+<div class="error-state" role="alert">
+  <i class="pi pi-exclamation-triangle error-state__icon" aria-hidden="true"></i>
+  <div class="error-state__text">
+    <h2 class="error-state__title">{{ title() }}</h2>
+    <p class="error-state__message">{{ message() }}</p>
+  </div>
+  <p-button
+    label="Повторить"
+    icon="pi pi-refresh"
+    severity="secondary"
+    [outlined]="true"
+    (onClick)="retry.emit()"
+  />
+</div>

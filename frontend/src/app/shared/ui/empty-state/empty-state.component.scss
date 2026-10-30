@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-3);
+  padding: var(--app-space-7) var(--app-space-5);
+  text-align: center;
+  background: var(--app-surface);
+  border: 1px dashed var(--app-border-strong);
+  border-radius: var(--app-radius-md);
+}
+
+.empty-state__icon {
+  color: var(--app-text-muted);
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.empty-state__title {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.empty-state__message {
+  margin: 0;
+  max-width: 55ch;
+  color: var(--app-text-muted);
+}
+
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--app-space-2);
+}

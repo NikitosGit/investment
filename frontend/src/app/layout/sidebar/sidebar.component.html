@@ -1,0 +1,14 @@
+<nav class="sidebar" aria-label="Боковая навигация">
+  @for (item of items(); track item.path) {
+    <a
+      class="app-nav-link sidebar__link"
+      [routerLink]="item.path"
+      [class.is-active]="isActive(item)"
+      [attr.aria-current]="isActive(item) ? 'page' : null"
+      [attr.data-section]="item.section"
+    >
+      <i [class]="'sidebar__icon ' + item.icon" aria-hidden="true"></i>
+      <span>{{ item.label }}</span>
+    </a>
+  }
+</nav>

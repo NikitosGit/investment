@@ -1,0 +1,16 @@
+# Frontend build output (FastAPI serves this in production)
+dist/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Local data / databases
+*.db
+*.db-wal
+*.db-shm
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.angular/

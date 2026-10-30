@@ -1,0 +1,16 @@
+:host {
+  display: inline-block;
+}
+
+.price-source-badge {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-2);
+}
+
+.price-source-badge__date {
+  color: var(--app-text-muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}

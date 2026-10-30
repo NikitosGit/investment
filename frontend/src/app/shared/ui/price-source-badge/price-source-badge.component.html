@@ -1,0 +1,21 @@
+<div class="price-source-badge">
+  <p-tag
+    [value]="presentation().label"
+    [severity]="presentation().severity"
+    [icon]="presentation().icon"
+    [rounded]="true"
+  />
+
+  @if (isStale()) {
+    <p-tag
+      value="Устарело"
+      severity="warn"
+      icon="pi pi-clock"
+      [rounded]="true"
+      title="Цена не за сегодня"
+    />
+    @if (priceDate()) {
+      <span class="price-source-badge__date">цена от {{ priceDate() | date }}</span>
+    }
+  }
+</div>
