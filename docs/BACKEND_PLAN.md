@@ -214,12 +214,12 @@ backend/
 │   │   ├── scheduler.py
 │   │   └── refresh.py
 │   └── scripts/
-│       ├── seed_demo.py
+│       ├── seed_demo.py        # CLI: python -m app.scripts.seed_demo
 │       └── backup.py           # CLI: python -m app.scripts.backup
 └── tests/
     ├── conftest.py
-    ├── unit/
-    ├── integration/
+    ├── *_helpers.py            # общие builders и API-хелперы
+    ├── test_*.py               # unit, API и интеграционные тесты
     └── fixtures/
         └── moex/
 ```
@@ -232,6 +232,7 @@ backend/
 - Схемы Pydantic отделены от ORM-моделей.
 - Все настройки — через `app/core/config.py`.
 - Ошибки — через `AppError`, единый формат ответа.
+- MVP держит тесты плоским списком `test_*.py` рядом с общими хелперами и фикстурами; отдельные каталоги `unit/` и `integration/` не заводятся.
 
 ## 4. Конфигурация
 
@@ -533,6 +534,18 @@ price_micro = round(price_rub × 1_000_000)
 ```text
 percent = price_micro / 1_000_000 / face_value_rub × 100
 ```
+
+Средняя цена покупки облигации в процентах:
+
+```text
+avg_price_percent = avg_price_rub / avg_purchase_face_rub × 100
+```
+
+- `avg_purchase_face_rub` — взвешенный номинал на даты покупок, который ведётся при replay позиции: каждая `BUY` добавляет `quantity × face_value_kopecks`, зафиксированный в операции.
+- `SELL` списывает долю номинальной базы пропорционально количеству (округление `ROUND_HALF_UP`).
+- Полное закрытие позиции сбрасывает номинальную базу в ноль.
+- Fallback на текущий номинал — только для legacy-операций, где `face_value_kopecks` не сохранён.
+- Поэтому `avg_price_percent` не меняется после амортизации и остаётся корректным для покупок, растянутых через дату амортизации.
 
 ### 6.4 Текущая стоимость
 
@@ -1007,6 +1020,10 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 }
 ```
 
+`avg_price_percent` считается от взвешенного номинала на даты покупок (§6.3),
+поэтому после амортизации он остаётся равным проценту покупки (в примере —
+`95.123000`), а не пересчитывается от текущего номинала.
+
 ### 8.6 Доходы
 
 | Метод | Путь | Назначение |
@@ -1475,6 +1492,8 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - Backup/export.
 - Удаление актива с операциями → 409.
 - Повторное добавление актива → 409.
+- Seed demo: офлайн-идемпотентность, частичное восстановление, откат при сбое, невалидный якорь, точный состав демо-данных.
+- Acceptance: демо-подмножество §14 — health, позиции, процент облигации, дашборд, доходы/snapshots, backup, JSON/CSV-экспорт, oversell 409.
 
 ### API
 
@@ -1484,6 +1503,7 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - Проверка OpenAPI generation.
 - Настройки: defaults, частичный PATCH, 422 для unknown/null/empty/invalid, 400 при PATCH `true` под env `false`.
 - Backup/export: content types, `Content-Disposition`, имена файлов, ZIP-состав, 422 для невалидного `format`.
+- OpenAPI-контракт: все документированные пути/методы, уникальные `operationId`, ключевые схемы, деньги-строки, enum-ы, `additionalProperties: false`.
 
 ### Coverage
 
@@ -1595,6 +1615,10 @@ Seed создает:
 
 Это позволяет frontend работать без сети и MOEX.
 
+Seed офлайн и идемпотентен: версия и дата-якорь хранятся в `app_setting`
+(`demo_seed_version`, `demo_seed_anchor`), повторный запуск не дублирует и не
+сдвигает данные, а прерванный запуск можно безопасно повторить.
+
 ## 16. Риски и ограничения
 
 | Риск | Мера |
@@ -1685,6 +1709,8 @@ Backend реализуется первым и заканчивается ста
 
 Отметки о выполнении этапов. Детали и результаты ревью — в [`BACKEND_PROGRESS.md`](BACKEND_PROGRESS.md).
 
+Все этапы 0–9 выполнены; backend готов к передаче frontend.
+
 - [x] Этап 0. Каркас, конфигурация, логирование, health
 - [x] Этап 1. Модели, Alembic, SQLite PRAGMA, seed портфеля
 - [x] Этап 2. MOEX client: поиск, инфо, котировка, история, bondization
@@ -1694,5 +1720,5 @@ Backend реализуется первым и заканчивается ста
 - [x] Этап 6. QuoteService: refresh, history, manual, scheduler
 - [x] Этап 7. DashboardService + snapshots
 - [x] Этап 8. Settings, backup, export
-- [ ] Этап 9. Тесты, OpenAPI, README, seed demo
+- [x] Этап 9. Тесты, OpenAPI, README, seed demo
 

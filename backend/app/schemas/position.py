@@ -45,8 +45,9 @@ class PositionItem(ApiModel):
     def from_view(cls, view: PositionView) -> Self:
         face_value = view.current_face_value_kopecks
         avg_price_percent = None
-        if view.asset.type is AssetType.BOND and face_value:
-            percent_micro = price_micro_to_percent_micro(view.state.avg_price_micro, face_value)
+        avg_face_value = view.state.avg_face_value_kopecks or face_value
+        if view.asset.type is AssetType.BOND and avg_face_value:
+            percent_micro = price_micro_to_percent_micro(view.state.avg_price_micro, avg_face_value)
             avg_price_percent = format_price(percent_micro) if percent_micro is not None else None
 
         return cls(

@@ -34,6 +34,7 @@ class PositionState:
     quantity: int
     cost_kopecks: int
     avg_price_micro: int
+    avg_face_value_kopecks: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,15 +66,23 @@ def calculate_position(asset_id: int, operations: Sequence[Operation]) -> Positi
     ordered = sorted(operations, key=lambda operation: (operation.trade_date, operation.id or 0))
     quantity = 0
     cost_kopecks = 0
+    face_basis_kopecks = 0
 
     for operation in ordered:
-        quantity, cost_kopecks = apply_operation(asset_id, quantity, cost_kopecks, operation)
+        quantity, cost_kopecks, face_basis_kopecks = apply_operation(
+            asset_id,
+            quantity,
+            cost_kopecks,
+            face_basis_kopecks,
+            operation,
+        )
 
     return PositionState(
         asset_id=asset_id,
         quantity=quantity,
         cost_kopecks=cost_kopecks,
         avg_price_micro=_average_price_micro(cost_kopecks, quantity),
+        avg_face_value_kopecks=_average_face_value_per_unit(face_basis_kopecks, quantity),
     )
 
 
@@ -81,30 +90,40 @@ def apply_operation(
     asset_id: int,
     quantity: int,
     cost_kopecks: int,
+    face_basis_kopecks: int,
     operation: Operation,
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     """Apply one operation to a running position (plan §6.1).
 
-    Returns the new ``(quantity, cost_kopecks)`` pair. The cost release of a
-    sale is proportional and rounded half up; a full close resets the cost to
-    zero. Selling more than is available raises ``INSUFFICIENT_QUANTITY``.
+    Returns the new ``(quantity, cost_kopecks, face_basis_kopecks)`` triple.
+    Cost and face-basis releases of a sale are proportional and rounded half
+    up; a full close resets both to zero. Selling more than is available raises
+    ``INSUFFICIENT_QUANTITY``.
     """
 
     if operation.type is OperationType.BUY:
         new_quantity = quantity + operation.quantity
         new_cost = cost_kopecks + quantity_cost_kopecks(operation.quantity, operation.price_micro)
-        return new_quantity, new_cost
+        new_face_basis = face_basis_kopecks + operation.quantity * (
+            operation.face_value_kopecks or 0
+        )
+        return new_quantity, new_cost, new_face_basis
 
     _ensure_can_sell(asset_id, operation, available=quantity)
     if operation.quantity == quantity:
-        # Full close: the whole cost basis is released exactly.
+        # Full close: the whole cost and face basis are released exactly.
         new_cost = 0
+        new_face_basis = 0
     else:
         new_cost = cost_kopecks - _sale_cost_kopecks(cost_kopecks, operation.quantity, quantity)
+        new_face_basis = face_basis_kopecks - _sale_face_basis_kopecks(
+            face_basis_kopecks, operation.quantity, quantity
+        )
     new_quantity = quantity - operation.quantity
     if new_quantity == 0:
         new_cost = 0
-    return new_quantity, new_cost
+        new_face_basis = 0
+    return new_quantity, new_cost, new_face_basis
 
 
 def load_operations(
@@ -203,10 +222,36 @@ def _sale_cost_kopecks(cost_kopecks: int, sell_quantity: int, quantity: int) -> 
     return int(value.quantize(_ONE, rounding=ROUND_HALF_UP))
 
 
+def _sale_face_basis_kopecks(
+    face_basis_kopecks: int,
+    sell_quantity: int,
+    quantity: int,
+) -> int:
+    """Release the average share of the face basis with half-up rounding."""
+
+    value = Decimal(face_basis_kopecks) * Decimal(sell_quantity) / Decimal(quantity)
+    return int(value.quantize(_ONE, rounding=ROUND_HALF_UP))
+
+
 def _average_price_micro(cost_kopecks: int, quantity: int) -> int:
     if quantity <= 0:
         return 0
     value = Decimal(cost_kopecks) * Decimal(1_000_000) / (_AVG_DIVISOR * Decimal(quantity))
+    return int(value.quantize(_ONE, rounding=ROUND_HALF_UP))
+
+
+def _average_face_value_per_unit(face_basis_kopecks: int, quantity: int) -> int | None:
+    """Return the weighted face value per open unit, or ``None`` when closed.
+
+    The face basis grows with every buy (the face value frozen on the trade
+    date) and is released proportionally on sells, so purchases that span an
+    amortization keep a meaningful historical percentage even after the current
+    face value changes.
+    """
+
+    if quantity <= 0:
+        return None
+    value = Decimal(face_basis_kopecks) / Decimal(quantity)
     return int(value.quantize(_ONE, rounding=ROUND_HALF_UP))
 
 

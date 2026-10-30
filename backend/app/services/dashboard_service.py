@@ -228,7 +228,7 @@ def _replay_series(session: Session, start: date, end: date) -> list[SeriesPoint
     quotes_by_asset = _load_quotes(session, asset_ids, end)
     amortizations_by_asset = _load_amortizations(session, assets, end)
 
-    states: dict[int, tuple[int, int]] = {}
+    states: dict[int, tuple[int, int, int]] = {}
     quote_positions: dict[int, int] = {}
     last_quotes: dict[int, Quote | None] = {}
     operation_index = 0
@@ -238,16 +238,20 @@ def _replay_series(session: Session, start: date, end: date) -> list[SeriesPoint
         day = start + timedelta(days=offset)
         while operation_index < len(operations) and operations[operation_index].trade_date <= day:
             operation = operations[operation_index]
-            quantity, cost_kopecks = states.get(operation.asset_id, (0, 0))
+            quantity, cost_kopecks, face_basis_kopecks = states.get(operation.asset_id, (0, 0, 0))
             states[operation.asset_id] = position_service.apply_operation(
-                operation.asset_id, quantity, cost_kopecks, operation
+                operation.asset_id,
+                quantity,
+                cost_kopecks,
+                face_basis_kopecks,
+                operation,
             )
             operation_index += 1
 
         market_value = 0
         invested = 0
         is_partial = False
-        for asset_id, (quantity, cost_kopecks) in states.items():
+        for asset_id, (quantity, cost_kopecks, _face_basis_kopecks) in states.items():
             if quantity <= 0:
                 continue
             invested += cost_kopecks
