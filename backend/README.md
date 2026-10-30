@@ -65,6 +65,13 @@ uv run ruff format --check .
 - Доходы: `GET/POST/PATCH/DELETE /api/income`, `POST /api/income/{id}/mark-paid`.
 - Котировки: `GET /api/quotes/{asset_id}/history`, `POST /api/quotes/refresh`, `POST /api/quotes/manual`.
 - Дашборд и история: `GET /api/dashboard?period=1Y`, `GET /api/snapshots?period=1Y`.
+- Настройки: `GET/PATCH /api/settings`.
+- Backup и экспорт: `POST /api/backup`, `GET /api/export?format=json|csv`.
+
+Резервная копия создается командой `python -m app.scripts.backup`
+(через `python -m uv run python -m app.scripts.backup`, если `uv` не в PATH) или
+`POST /api/backup` и представляет собой консистентную копию SQLite.
+JSON-экспорт предназначен для просмотра; каноническая резервная копия — файл `.db`.
 
 ## Миграции
 
@@ -92,5 +99,5 @@ uv run alembic upgrade head
 | 5. Доходы | ✅ готово |
 | 6. Котировки и планировщик | ✅ готово |
 | 7. Дашборд и snapshots | ✅ готово |
-| 8. Настройки, backup, export | ⏳ |
+| 8. Настройки, backup, export | ✅ готово |
 | 9. Тесты, OpenAPI, README, seed | ⏳ |

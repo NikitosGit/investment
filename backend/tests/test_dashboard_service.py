@@ -8,6 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import AssetType, OperationType
 from app.core.errors import AppError, ErrorCode
+from app.core.periods import (
+    DASHBOARD_PERIOD_DAYS,
+    DASHBOARD_PERIODS,
+    DEFAULT_DASHBOARD_PERIOD,
+)
 from app.core.time import today_local
 from app.db.models.asset import Asset
 from app.db.models.portfolio import Portfolio
@@ -171,4 +176,7 @@ def test_coupon_pay_date_today_is_upcoming_and_not_overdue(db_session: Session) 
 
 
 def test_dashboard_period_mapping_matches_the_api_literal() -> None:
-    assert list(dashboard_service.DASHBOARD_PERIOD_DAYS) == list(get_args(DashboardPeriod))
+    assert get_args(DashboardPeriod) == DASHBOARD_PERIODS
+    assert tuple(DASHBOARD_PERIOD_DAYS) == DASHBOARD_PERIODS
+    assert DEFAULT_DASHBOARD_PERIOD in DASHBOARD_PERIODS
+    assert dashboard_service.DASHBOARD_PERIOD_DAYS is DASHBOARD_PERIOD_DAYS

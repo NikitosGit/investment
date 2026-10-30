@@ -234,3 +234,40 @@
 - `assets_count` считает все активы, а не только с открытыми позициями.
 - Ряд начинается с первой операции, а не с начала периода.
 - Плановый snapshot пропускается, если ручной refresh держит lock в момент job.
+
+## Этап 8. Настройки, backup и export — ✅ выполнено
+
+**Реализовано**
+
+- `app/services/settings_service.py`: ключи `quote_refresh_enabled` и `dashboard_period`; толерантный разбор boolean (`true/1/yes/on`, `false/0/no/off`, регистр и пробелы); валидация периода через `app/core/periods.py`; `all_values` для экспорта; `effective_quote_refresh_enabled`, объединяющий env-master-switch и сохранённую настройку.
+- `GET/PATCH /api/settings`: эффективные значения; частичное обновление одного или обоих ключей; неизвестный ключ, `null`, пустой или невалидный payload → 422; PATCH `quote_refresh_enabled=true` при `QUOTE_REFRESH_ENABLED=false` → 400. Семантика env-master-switch: env `false` не создаёт scheduler; сохранённая настройка управляет плановыми запусками, пока scheduler существует; ручной refresh не блокируется.
+- `GET /api/dashboard` без `period` использует сохранённый `dashboard_period`; явный query-параметр переопределяет его; значение по умолчанию — `1Y`.
+- `BackupService.create_backup`: WAL-safe копия через SQLite backup API, источник открывается read-only, проверяются существование/непустой файл/наличие схемы `portfolio`; имя файла в локальном времени с суффиксом при коллизии; thread lock; удаление частичного файла; POSIX-путь в ответе API; `POST /api/backup`.
+- `export_json`: читаемая API-проекция (portfolio, assets, operations, income, quotes, amortizations, snapshots, settings) с деньгами и датами строками; это не lossless-формат восстановления — каноническая копия — SQLite.
+- `export_csv_zip`: ZIP с `positions.csv`, `operations.csv`, `income.csv`; UTF-8 BOM, CRLF, санитизация формул (`= + - @ \t \r`), orphan-строки сохраняются.
+- `GET /api/export?format=json|csv` с attachment-именами файлов; невалидный формат → 422; backup-файлы не отдаются по HTTP.
+- `app/scripts/backup.py` — CLI.
+- CORS отдаёт наружу `Content-Disposition`.
+- Тесты: сервис/API настроек, env-master-ветки, job gate, backup (валидность/отсутствие/пустой/без миграций/повреждённый/конкурентность/cleanup), JSON/CSV (содержимое/порядок/пустая БД/orphans/санитизация), API (content types/dispositions/OpenAPI).
+
+**Проверка**
+
+- `python -m uv run ruff check .` / `ruff format --check .` — чисто.
+- `python -m uv run pytest` — 429 passed.
+- Покрытие — 97% общее; модули этапа 8 — на уровне 100% или близко.
+
+**Ревью (независимый агент, 5 осей + повторные проверки)**
+
+- Required 1: backup мог вернуть 200/пустую копию для отсутствующей/нулевой/немигрированной БД и создать файл источника — исправлено (read-only URI, проверки существования/размера/схемы, 400, без файлов).
+- Required 2: `quote_refresh_enabled` мог показывать/использовать `true` при выключенном env-master-switch — исправлено единым effective-resolver в GET/PATCH/job; PATCH `true` при env `false` → 400.
+- Required 3: путь «env=true, настройка по умолчанию» не был покрыт тестами — добавлены тесты с dependency override; мутация теперь убивается.
+- Optional исправлено: lock/конкурентность имён backup; санитизация `\t`/`\r` в CSV; централизованные периоды дашборда; проброс ошибок `all_values`; orphan-операции и доходы в экспорте; тесты порядка экспорта; POSIX-путь; defense-тесты; заголовок CORS; тип ошибки настроек.
+- Отложено/известно: экспорт собирает данные в памяти и содержит N+1 запросы; JSON-экспорт не является lossless-форматом восстановления; backup потокобезопасен, но не process-safe для одновременных CLI+API в одну секунду; `_cell` считает любой ведущий `-` текстом; `POST /api/backup` возвращает 200.
+
+**Отложено**
+
+- Экспорт собирает данные в памяти и содержит N+1 запросы — приемлемо для локального MVP.
+- JSON-экспорт не является lossless-форматом восстановления; каноническая резервная копия — SQLite-файл.
+- Backup потокобезопасен, но не process-safe для одновременных CLI+API в одну секунду.
+- `_cell` считает любой ведущий `-` текстом (включая отрицательные числа).
+- `POST /api/backup` возвращает 200, а не 201.

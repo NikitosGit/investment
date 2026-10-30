@@ -89,12 +89,27 @@ class _FakeClient:
         self.closed = True
 
 
+class _FailingCloseClient(_FakeClient):
+    """A client whose shutdown fails."""
+
+    def close(self) -> None:
+        raise RuntimeError("close boom")
+
+
 class _FakeSession:
-    def __enter__(self) -> object:
-        return object()
+    """Minimal session for the disabled-refresh path."""
+
+    def __init__(self, stored_setting: str | None = None) -> None:
+        self.stored_setting = stored_setting
+
+    def __enter__(self) -> "_FakeSession":
+        return self
 
     def __exit__(self, *args: object) -> None:
         return None
+
+    def scalar(self, _: object) -> str | None:
+        return self.stored_setting
 
 
 class _RecordingSession:
@@ -102,7 +117,8 @@ class _RecordingSession:
 
     instances: ClassVar[list["_RecordingSession"]] = []
 
-    def __init__(self) -> None:
+    def __init__(self, stored_setting: str | None = None) -> None:
+        self.stored_setting = stored_setting
         self.commits = 0
         self.rollbacks = 0
         _RecordingSession.instances.append(self)
@@ -112,6 +128,9 @@ class _RecordingSession:
 
     def __exit__(self, *args: object) -> None:
         return None
+
+    def scalar(self, _: object) -> str | None:
+        return self.stored_setting
 
     def commit(self) -> None:
         self.commits += 1
@@ -124,11 +143,20 @@ def _patch_job(
     monkeypatch: pytest.MonkeyPatch,
     refresh_all: Any,
     session_factory: Any = _FakeSession,
+    *,
+    stored_enabled: str | None = None,
+    env_enabled: bool = True,
+    client_class: Any = _FakeClient,
 ) -> None:
     _FakeClient.instances.clear()
     _RecordingSession.instances.clear()
-    monkeypatch.setattr(refresh_job, "MoexClient", _FakeClient)
-    monkeypatch.setattr(refresh_job, "SessionLocal", session_factory)
+    monkeypatch.setattr(
+        refresh_job,
+        "get_settings",
+        lambda: _settings(quote_refresh_enabled=env_enabled),
+    )
+    monkeypatch.setattr(refresh_job, "MoexClient", client_class)
+    monkeypatch.setattr(refresh_job, "SessionLocal", lambda: session_factory(stored_enabled))
     monkeypatch.setattr(refresh_job.quote_service, "refresh_all", refresh_all)
 
 
@@ -246,3 +274,145 @@ def test_daily_refresh_logs_summary(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert _FakeClient.instances[0].closed
     assert _RecordingSession.instances[0].commits == 1
+
+
+def test_daily_refresh_skips_when_disabled_in_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
+    snapshot_calls: list[Any] = []
+
+    def _refresh(*_: Any) -> Any:
+        calls.append(True)
+        return _refresh_result()
+
+    _patch_job(
+        monkeypatch,
+        _refresh,
+        _RecordingSession,
+        stored_enabled="false",
+        env_enabled=True,
+    )
+    monkeypatch.setattr(
+        refresh_job.snapshot_service,
+        "compute_and_store",
+        lambda session: snapshot_calls.append(session),
+    )
+    logged: list[str] = []
+    monkeypatch.setattr(refresh_job.logger, "info", lambda message, *args: logged.append(message))
+
+    refresh_job.run_daily_refresh()
+
+    assert calls == []
+    assert _FakeClient.instances == []
+    assert snapshot_calls == []
+    assert any("disabled" in message for message in logged)
+
+
+def test_daily_refresh_skips_when_master_switch_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
+    _patch_job(
+        monkeypatch,
+        lambda *_: calls.append(True) or _refresh_result(),
+        _RecordingSession,
+        stored_enabled="true",
+        env_enabled=False,
+    )
+
+    refresh_job.run_daily_refresh()
+
+    assert calls == []
+    assert _FakeClient.instances == []
+
+
+def test_daily_refresh_runs_when_enabled_in_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
+    _patch_job(
+        monkeypatch,
+        lambda *_: calls.append(True) or _refresh_result(),
+        _RecordingSession,
+        stored_enabled="true",
+        env_enabled=True,
+    )
+    monkeypatch.setattr(refresh_job.snapshot_service, "compute_and_store", lambda _: None)
+
+    refresh_job.run_daily_refresh()
+
+    assert calls == [True]
+    assert len(_FakeClient.instances) == 1
+    assert _FakeClient.instances[0].closed
+    assert _RecordingSession.instances[0].commits == 1
+
+
+def test_daily_refresh_uses_env_default_when_setting_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[Any] = []
+    _patch_job(
+        monkeypatch,
+        lambda *_: calls.append(True) or _refresh_result(),
+        _FakeSession,
+        stored_enabled=None,
+        env_enabled=False,
+    )
+
+    refresh_job.run_daily_refresh()
+
+    assert calls == []
+    assert _FakeClient.instances == []
+
+
+def test_daily_refresh_falls_back_to_enabled_env_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[Any] = []
+    _patch_job(
+        monkeypatch,
+        lambda *_: calls.append(True) or _refresh_result(),
+        _FakeSession,
+        stored_enabled=None,
+        env_enabled=True,
+    )
+    monkeypatch.setattr(refresh_job.snapshot_service, "compute_and_store", lambda _: None)
+    monkeypatch.setattr(_FakeSession, "commit", lambda _: None, raising=False)
+
+    refresh_job.run_daily_refresh()
+
+    assert calls == [True]
+    assert len(_FakeClient.instances) == 1
+
+
+def test_daily_refresh_propagates_other_app_errors_to_the_outer_guard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fail(*_: Any) -> Any:
+        raise AppError(ErrorCode.BAD_REQUEST, "bad request", status_code=400)
+
+    logged: list[str] = []
+    _patch_job(monkeypatch, _fail, _RecordingSession)
+    monkeypatch.setattr(
+        refresh_job.logger,
+        "exception",
+        lambda message, *args: logged.append(message),
+    )
+
+    refresh_job.run_daily_refresh()
+
+    assert "Daily quote refresh failed" in logged
+    assert _FakeClient.instances[0].closed
+
+
+def test_daily_refresh_swallows_client_close_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    logged: list[str] = []
+    _patch_job(
+        monkeypatch,
+        lambda *_: _refresh_result(),
+        _RecordingSession,
+        client_class=_FailingCloseClient,
+    )
+    monkeypatch.setattr(refresh_job.snapshot_service, "compute_and_store", lambda _: None)
+    monkeypatch.setattr(
+        refresh_job.logger,
+        "exception",
+        lambda message, *args: logged.append(message),
+    )
+
+    refresh_job.run_daily_refresh()
+
+    assert "Failed to close the quote refresh MOEX client" in logged

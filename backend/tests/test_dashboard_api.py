@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.time import today_local
+from app.services import settings_service
 
 from dashboard_helpers import (  # isort: skip
     add_income,
@@ -152,6 +153,38 @@ def test_dashboard_invalid_period_is_422(client: TestClient) -> None:
     assert body["error"]["details"]["errors"][0]["field"] == "query.period"
 
 
+def test_dashboard_uses_the_stored_period(client: TestClient, db_session: Session) -> None:
+    _build_portfolio(db_session)
+    settings_service.set_dashboard_period(db_session, "3M")
+
+    body = client.get("/api/dashboard").json()
+
+    assert body["period"] == "3M"
+    assert body["series"][0]["date"] == days_ago(60).isoformat()
+
+
+def test_dashboard_explicit_period_overrides_the_stored_one(
+    client: TestClient, db_session: Session
+) -> None:
+    _build_portfolio(db_session)
+    settings_service.set_dashboard_period(db_session, "1M")
+
+    body = client.get("/api/dashboard", params={"period": "ALL"}).json()
+
+    assert body["period"] == "ALL"
+
+
+def test_dashboard_invalid_stored_period_falls_back_to_one_year(
+    client: TestClient, db_session: Session
+) -> None:
+    _build_portfolio(db_session)
+    settings_service.set_value(db_session, settings_service.DASHBOARD_PERIOD, "2Y")
+
+    body = client.get("/api/dashboard").json()
+
+    assert body["period"] == "1Y"
+
+
 def test_dashboard_on_an_empty_portfolio(client: TestClient) -> None:
     body = client.get("/api/dashboard").json()
 
@@ -219,5 +252,7 @@ def test_openapi_documents_the_dashboard_endpoint(client: TestClient) -> None:
     path = schema["paths"]["/api/dashboard"]["get"]
     assert path["summary"] == "Дашборд портфеля"
     period = next(parameter for parameter in path["parameters"] if parameter["name"] == "period")
-    assert period["schema"]["default"] == "1Y"
-    assert set(period["schema"]["enum"]) == {"1M", "3M", "1Y", "ALL"}
+    assert period["required"] is False
+    variants = period["schema"].get("anyOf", [period["schema"]])
+    enum_values = next(variant["enum"] for variant in variants if "enum" in variant)
+    assert set(enum_values) == {"1M", "3M", "1Y", "ALL"}

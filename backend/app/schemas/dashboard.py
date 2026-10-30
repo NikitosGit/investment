@@ -1,16 +1,14 @@
 """Dashboard API schemas (plan §8.7)."""
 
 from datetime import date
-from typing import Literal, Self
+from typing import Self
 
 from app.core.money import format_money
+from app.core.periods import DashboardPeriod as DashboardPeriod
 from app.schemas.common import ApiModel
 from app.schemas.income import IncomeItem
 from app.schemas.position import PositionItem
 from app.services.dashboard_service import DashboardData, DashboardTotals, SeriesPoint
-
-DashboardPeriod = Literal["1M", "3M", "1Y", "ALL"]
-"""Periods accepted by the dashboard and snapshot history endpoints."""
 
 
 class DashboardTotalsOut(ApiModel):

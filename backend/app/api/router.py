@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     assets,
+    backup,
     dashboard,
     health,
     income,
@@ -11,6 +12,7 @@ from app.api.routes import (
     portfolio,
     positions,
     quotes,
+    settings,
     snapshots,
 )
 
@@ -24,3 +26,5 @@ api_router.include_router(income.router)
 api_router.include_router(quotes.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(snapshots.router)
+api_router.include_router(settings.router)
+api_router.include_router(backup.router)

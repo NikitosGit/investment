@@ -48,6 +48,16 @@ def test_request_id_is_returned(client: TestClient) -> None:
     assert response.headers["X-Request-ID"] == "test-request-id"
 
 
+def test_cors_exposes_the_export_filename_header(client: TestClient) -> None:
+    response = client.get("/api/export", headers={"Origin": "http://localhost:4200"})
+
+    assert response.status_code == 200
+    assert "Content-Disposition" in response.headers
+    exposed = response.headers["access-control-expose-headers"].lower()
+    assert "content-disposition" in exposed
+    assert "x-request-id" in exposed
+
+
 def test_unknown_route_uses_error_format(client: TestClient) -> None:
     response = client.get("/api/unknown")
 

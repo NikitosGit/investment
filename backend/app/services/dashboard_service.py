@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import AssetType, IncomeKind, IncomeStatus, PriceType
 from app.core.errors import AppError, ErrorCode
+from app.core.periods import DASHBOARD_PERIOD_DAYS, DEFAULT_DASHBOARD_PERIOD
 from app.core.time import today_local
 from app.db.models.asset import Asset
 from app.db.models.bond import BondAmortization
@@ -28,14 +29,6 @@ from app.services import (
 )
 from app.services.income_service import IncomeView
 from app.services.position_service import PositionView
-
-DASHBOARD_PERIOD_DAYS: dict[str, int | None] = {
-    "1M": 30,
-    "3M": 90,
-    "1Y": 365,
-    "ALL": None,
-}
-"""Supported dashboard periods and their lookback in days (``None`` = all)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +89,7 @@ def period_start(period: str, *, today: date | None = None) -> date | None:
     return (today or today_local()) - timedelta(days=days)
 
 
-def get_dashboard(session: Session, period: str = "1Y") -> DashboardData:
+def get_dashboard(session: Session, period: str = DEFAULT_DASHBOARD_PERIOD) -> DashboardData:
     """Build the dashboard for a period (plan §6.7)."""
 
     today = today_local()

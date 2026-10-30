@@ -2,6 +2,11 @@
 
 The job owns its MOEX client and database session because it runs outside the
 request lifecycle. It never raises: scheduler errors must not kill the worker.
+
+``QUOTE_REFRESH_ENABLED`` is the deployment master switch: when it is false the
+scheduler is not created at all. The ``quote_refresh_enabled`` database setting
+only toggles scheduled runs while a scheduler exists, so it is checked here
+before any network work. Manual ``POST /api/quotes/refresh`` is not affected.
 """
 
 import logging
@@ -10,7 +15,7 @@ from app.core.config import get_settings
 from app.core.errors import AppError, ErrorCode
 from app.db.session import SessionLocal
 from app.providers.moex.client import MoexClient
-from app.services import quote_service, snapshot_service
+from app.services import quote_service, settings_service, snapshot_service
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +26,15 @@ def run_daily_refresh() -> None:
     client: MoexClient | None = None
     try:
         settings = get_settings()
-        client = MoexClient.from_settings(settings)
         with SessionLocal() as session:
+            enabled = settings_service.effective_quote_refresh_enabled(
+                session, env_enabled=settings.quote_refresh_enabled
+            )
+            if not enabled:
+                logger.info("Quote refresh is disabled in settings; scheduled run skipped")
+                return
+
+            client = MoexClient.from_settings(settings)
             try:
                 result = quote_service.refresh_all(session, client)
             except AppError as exc:

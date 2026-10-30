@@ -124,7 +124,7 @@ def build_views(session: Session, incomes: Sequence[Income]) -> list[IncomeView]
             views.append(
                 IncomeView(
                     income=income,
-                    asset_secid=secids[income.asset_id],
+                    asset_secid=secids.get(income.asset_id, ""),
                     quantity=income.quantity,
                     amount_total_kopecks=income.amount_total_kopecks,
                     is_overdue=False,
@@ -139,7 +139,7 @@ def build_views(session: Session, incomes: Sequence[Income]) -> list[IncomeView]
         views.append(
             IncomeView(
                 income=income,
-                asset_secid=secids[income.asset_id],
+                asset_secid=secids.get(income.asset_id, ""),
                 quantity=quantity,
                 amount_total_kopecks=expected_amount(income, quantity),
                 is_overdue=income.pay_date < today,

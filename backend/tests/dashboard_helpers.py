@@ -69,6 +69,7 @@ def add_operation(
     quantity: int,
     price_micro: int,
     type: OperationType = OperationType.BUY,
+    note: str | None = None,
 ) -> Operation:
     """Append a validated-shape operation without going through the API service."""
 
@@ -83,6 +84,7 @@ def add_operation(
         input_price_micro=price_micro,
         input_price_type=(PriceType.PERCENT if asset.type is AssetType.BOND else PriceType.RUB),
         face_value_kopecks=asset.initial_face_value_kopecks,
+        note=note,
     )
     session.add(operation)
     session.commit()

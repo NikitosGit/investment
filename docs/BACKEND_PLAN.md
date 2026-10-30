@@ -151,6 +151,7 @@ backend/
 │   │   ├── config.py           # настройки из env
 │   │   ├── logging.py
 │   │   ├── errors.py           # AppError и коды
+│   │   ├── periods.py          # допустимые периоды дашборда
 │   │   └── time.py             # Europe/Moscow, UTC
 │   ├── db/
 │   │   ├── base.py             # DeclarativeBase, enum-типы
@@ -175,7 +176,8 @@ backend/
 │   │   ├── dashboard.py
 │   │   ├── snapshot.py
 │   │   ├── quote.py
-│   │   └── settings.py
+│   │   ├── settings.py
+│   │   └── backup.py
 │   ├── api/
 │   │   ├── deps.py             # get_db, get_settings, get_moex
 │   │   ├── router.py
@@ -212,7 +214,8 @@ backend/
 │   │   ├── scheduler.py
 │   │   └── refresh.py
 │   └── scripts/
-│       └── seed_demo.py
+│       ├── seed_demo.py
+│       └── backup.py           # CLI: python -m app.scripts.backup
 └── tests/
     ├── conftest.py
     ├── unit/
@@ -1162,7 +1165,7 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| `GET` | `/api/settings` | Настройки |
+| `GET` | `/api/settings` | Эффективные настройки |
 | `PATCH` | `/api/settings` | Изменить разрешенные ключи |
 
 Разрешенные ключи:
@@ -1170,12 +1173,39 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - `quote_refresh_enabled`
 - `dashboard_period`
 
+`GET /api/settings`:
+
+```json
+{
+  "quote_refresh_enabled": true,
+  "dashboard_period": "1Y"
+}
+```
+
+`PATCH /api/settings` — можно передать один или оба ключа:
+
+```json
+{
+  "quote_refresh_enabled": true,
+  "dashboard_period": "3M"
+}
+```
+
+Правила:
+
+- `GET` возвращает эффективные значения: `quote_refresh_enabled` учитывает env-master-switch, `dashboard_period` — сохранённую настройку или `1Y`.
+- `PATCH` обновляет только переданные ключи и возвращает полный набор эффективных значений; непереданные ключи не меняются.
+- Неизвестный ключ, `null`, пустой payload или невалидный период/boolean → `422 VALIDATION_ERROR`.
+- `PATCH` с `quote_refresh_enabled=true` при `QUOTE_REFRESH_ENABLED=false` → `400 BAD_REQUEST`: настройка развёртывания имеет приоритет.
+- `QUOTE_REFRESH_ENABLED=false` — master switch: scheduler не создаётся, автоматические обновления выключены. При `true` сохранённая настройка включает/выключает плановые запуски, пока scheduler существует. Ручной `POST /api/quotes/refresh` от этих настроек не зависит.
+- `GET /api/dashboard` без `period` использует сохранённый `dashboard_period` (по умолчанию `1Y`); явный query-параметр переопределяет его.
+
 ### 8.10 Backup и export
 
 | Метод | Путь | Назначение |
 |---|---|---|
 | `POST` | `/api/backup` | Создать копию SQLite |
-| `GET` | `/api/export?format=json` | Полный экспорт JSON |
+| `GET` | `/api/export?format=json` | Экспорт JSON (по умолчанию) |
 | `GET` | `/api/export?format=csv` | ZIP с CSV: позиции, операции, доходы |
 
 `POST /api/backup`:
@@ -1187,6 +1217,32 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
   "created_at": "2026-10-19T19:05:00+03:00"
 }
 ```
+
+Правила backup:
+
+- Копия создаётся через SQLite backup API, поэтому WAL-содержимое попадает в файл; обычное копирование файла для этого не используется.
+- Источник открывается read-only и проверяется: файл должен существовать, быть непустым и содержать схему приложения (таблицу `portfolio`).
+- Имя — `investments-YYYYMMDD-HHMMSS.db` в локальном времени; при совпадении добавляется суффикс `-1`, `-2` и т. д.
+- Одновременные копии в процессе сериализуются; при ошибке частично созданный файл удаляется.
+- В ответе путь в POSIX-формате (`data/backups/...`).
+- Ошибки: `400 BAD_REQUEST` для отсутствующего/пустого/немигрированного файла или не-SQLite источника; `500 INTERNAL_ERROR` для сбоя копирования без утечки путей и деталей драйвера.
+- Backup-файлы не отдаются по HTTP: доступен только путь в ответе.
+- `POST /api/backup` возвращает `200` (не `201`).
+
+`GET /api/export?format=json` (формат по умолчанию):
+
+- `Content-Type: application/json`, `Content-Disposition: attachment; filename="investments-export-YYYYMMDD-HHMMSS.json"`.
+- Ключи: `exported_at`, `app_version`, `portfolio`, `assets`, `operations`, `income`, `quotes`, `amortizations`, `snapshots`, `settings`.
+- Деньги и даты — строки, как в API; это человекочитаемая проекция, а не lossless-формат восстановления. Каноническая резервная копия — SQLite-файл из `POST /api/backup`.
+
+`GET /api/export?format=csv`:
+
+- `Content-Type: application/zip`, `Content-Disposition: attachment; filename="investments-export-YYYYMMDD-HHMMSS.zip"`.
+- В архиве ровно три файла: `positions.csv`, `operations.csv`, `income.csv`.
+- CSV — UTF-8 с BOM, окончания строк CRLF; значения, начинающиеся с `=`, `+`, `-`, `@`, табуляции или CR, экранируются как текст для защиты от формул.
+- Orphan-строки (операции/доходы без актива) сохраняются в экспорте.
+
+Невалидный `format` (не `json`/`csv`) → `422 VALIDATION_ERROR`.
 
 ### 8.11 Формат ошибок
 
@@ -1280,9 +1336,13 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 
 ### `BackupService`
 
-- `create_backup()`.
-- `export_json()`.
-- `export_csv_zip()`.
+- `create_backup()` — WAL-safe копия SQLite через backup API.
+  - Источник read-only; проверки существования, непустого файла и схемы `portfolio`.
+  - Локальное имя `investments-YYYYMMDD-HHMMSS.db`, суффикс при коллизии, thread lock, удаление частичного файла.
+  - Возвращает `path`, `size_bytes`, `created_at`; путь в POSIX-формате.
+- `export_json(session)` — проекция API (portfolio, assets, operations, income, quotes, amortizations, snapshots, settings) с деньгами/датами строками.
+  - Не lossless-формат восстановления; каноническая копия — SQLite-файл.
+- `export_csv_zip(session)` — ZIP с `positions.csv`, `operations.csv`, `income.csv`; UTF-8 BOM, CRLF, санитизация формул, orphan-строки сохраняются.
 
 ### `MoexClient`
 
@@ -1296,8 +1356,12 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 
 ### `SettingsService`
 
-- `get`, `get_value`, `set_value`.
-- `last_quote_refresh_at`.
+- `get_value`, `set_value`.
+- `all_values` — все сохранённые настройки для экспорта; ошибки БД пробрасываются.
+- `get_quote_refresh_enabled` / `set_quote_refresh_enabled` — толерантный разбор boolean.
+- `effective_quote_refresh_enabled(env_enabled)` — env-master-switch AND сохранённая настройка.
+- `get_dashboard_period` / `set_dashboard_period` — период из `app/core/periods.py`, невалидный отклоняется.
+- `get_last_quote_refresh_at` / `set_last_quote_refresh` — время и статус последнего refresh (naive UTC).
 
 ## 10. Фоновые задачи и жизненный цикл
 
@@ -1313,6 +1377,7 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 ### Ежедневный job
 
 - Время: 19:05 Europe/Moscow (после закрытия основной сессии).
+- Перед обновлением job проверяет эффективный флаг: env `QUOTE_REFRESH_ENABLED` AND сохранённый `quote_refresh_enabled`. Если автоматическое обновление выключено, плановый запуск пропускается без сетевых запросов; ручной `POST /api/quotes/refresh` это не затрагивает.
 - Шаги:
   1. Взять lock.
   2. Обновить текущие котировки всех активных активов.
@@ -1352,6 +1417,7 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 
 - Слушать `127.0.0.1` по умолчанию.
 - CORS только для localhost:4200.
+- CORS отдаёт наружу заголовок `Content-Disposition`, чтобы frontend мог прочитать имя файла экспорта.
 - Нет авторизации в MVP.
 - Валидация всех входных данных Pydantic.
 - SQL только через SQLAlchemy.
@@ -1382,6 +1448,10 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - Snapshot: расчёт/идемпотентный upsert, период и верхняя граница «сегодня».
 - Будущие операции не меняют текущие позиции/итоги, но участвуют в валидации записи.
 - Границы «сегодня»: `pay_date == today` и операции/котировки/амортизация на текущую дату.
+- SettingsService: boolean-алиасы и default, валидация периода, `all_values`, effective-флаг с env-master-switch.
+- BackupService: WAL-safe копия, read-only источник, отсутствующий/пустой/немигрированный/повреждённый файл, конкурентные имена, cleanup частичного файла, CLI.
+- Export: JSON-ключи и строковые деньги, CSV-файлы/порядок/пустая БД/orphan-строки/санитизация формул, BOM и CRLF.
+- Settings job gate: выключенный env-master-switch или сохранённый флаг пропускает плановый refresh; ручной refresh не блокируется.
 
 ### Provider (MOEX)
 
@@ -1412,6 +1482,8 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 - Проверка кодов и формата ошибок.
 - Проверка строковых денег.
 - Проверка OpenAPI generation.
+- Настройки: defaults, частичный PATCH, 422 для unknown/null/empty/invalid, 400 при PATCH `true` под env `false`.
+- Backup/export: content types, `Content-Disposition`, имена файлов, ZIP-состав, 422 для невалидного `format`.
 
 ### Coverage
 
@@ -1621,6 +1693,6 @@ Backend реализуется первым и заканчивается ста
 - [x] Этап 5. IncomeService: купоны, амортизация, mark-paid, дивиденды
 - [x] Этап 6. QuoteService: refresh, history, manual, scheduler
 - [x] Этап 7. DashboardService + snapshots
-- [ ] Этап 8. Settings, backup, export
+- [x] Этап 8. Settings, backup, export
 - [ ] Этап 9. Тесты, OpenAPI, README, seed demo
 
