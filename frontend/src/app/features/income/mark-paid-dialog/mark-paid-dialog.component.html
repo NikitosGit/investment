@@ -1,0 +1,101 @@
+<p-dialog
+  header="Подтвердить выплату"
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [style]="{ width: '520px' }"
+  [breakpoints]="{ '600px': '95vw' }"
+  styleClass="mark-paid-dialog"
+>
+  <form class="mark-paid-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (income(); as coupon) {
+      <dl class="mark-paid-form__summary">
+        <div>
+          <dt>Актив</dt>
+          <dd>{{ coupon.asset_secid }}</dd>
+        </div>
+        <div>
+          <dt>Тип</dt>
+          <dd>{{ kindLabel() }}</dd>
+        </div>
+        <div>
+          <dt>Количество</dt>
+          <dd class="mono">{{ coupon.quantity ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Ожидаемая сумма</dt>
+          <dd class="mono">{{ coupon.amount_total | money }}</dd>
+        </div>
+      </dl>
+
+      @if (!isExpected()) {
+        <p-message severity="warn" styleClass="mark-paid-form__message">
+          Эта запись уже не ожидаемая. Обновите список.
+        </p-message>
+      }
+    }
+
+    <div class="mark-paid-form__field">
+      <label class="mark-paid-form__label" for="mark-paid-amount">Фактическая сумма, ₽</label>
+      <input
+        pInputText
+        id="mark-paid-amount"
+        formControlName="amount_total"
+        inputmode="decimal"
+        autocomplete="off"
+        [attr.aria-describedby]="showError('amount_total') ? 'mark-paid-amount-error' : 'mark-paid-amount-hint'"
+      />
+      @if (showError('amount_total')) {
+        <small id="mark-paid-amount-error" class="mark-paid-form__error">
+          {{ errorText('amount_total') }}
+        </small>
+      } @else {
+        <small id="mark-paid-amount-hint" class="mark-paid-form__hint">
+          Очистите поле, чтобы backend рассчитал сумму по текущей позиции.
+        </small>
+      }
+    </div>
+
+    <div class="mark-paid-form__field">
+      <label class="mark-paid-form__label" for="mark-paid-date">Дата выплаты</label>
+      <p-datepicker
+        inputId="mark-paid-date"
+        formControlName="pay_date"
+        dateFormat="dd.mm.yy"
+        [showIcon]="true"
+        [showOnFocus]="false"
+        [showClear]="true"
+        appendTo="body"
+        styleClass="mark-paid-form__datepicker"
+      />
+      <small class="mark-paid-form__hint">
+        Если оставить дату пустой, backend сохранит дату из расписания.
+      </small>
+    </div>
+
+    @if (serverError(); as message) {
+      <p-message severity="error" styleClass="mark-paid-form__message">{{ message }}</p-message>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      label="Подтвердить выплату"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>

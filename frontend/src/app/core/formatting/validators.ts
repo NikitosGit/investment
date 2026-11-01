@@ -39,6 +39,31 @@ export function positiveIntegerValidator(control: AbstractControl): ValidationEr
 }
 
 /**
+ * Allow an empty value or a non-negative whole number (quantity).
+ *
+ * An empty control stays valid so optional API fields can be omitted; callers
+ * that require a value add `Validators.required` on top.
+ */
+export function nonNegativeIntegerValidator(control: AbstractControl): ValidationErrors | null {
+  const value = String(control.value ?? '').trim();
+
+  if (value.length === 0) {
+    return null;
+  }
+
+  if (!INTEGER_INPUT.test(value)) {
+    return { nonNegativeInteger: true };
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > MAX_SAFE_QUANTITY) {
+    return { nonNegativeInteger: true };
+  }
+
+  return null;
+}
+
+/**
  * Require a positive decimal with at most `maxDecimals` fraction digits.
  *
  * Accepts both `.` and `,` as the decimal separator and never converts the
@@ -58,5 +83,15 @@ export function positiveDecimalValidator(maxDecimals = 6): ValidatorFn {
     }
 
     return Number(normalizeDecimalInput(value)) > 0 ? null : { positiveDecimal: true };
+  };
+}
+
+/** Allow an empty value or a positive decimal with at most `maxDecimals`. */
+export function optionalPositiveDecimalValidator(maxDecimals = 6): ValidatorFn {
+  const validator = positiveDecimalValidator(maxDecimals);
+
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value = String(control.value ?? '').trim();
+    return value.length === 0 ? null : validator(control);
   };
 }

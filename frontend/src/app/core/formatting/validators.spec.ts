@@ -1,7 +1,9 @@
 import { FormControl } from '@angular/forms';
 
 import {
+  nonNegativeIntegerValidator,
   normalizeDecimalInput,
+  optionalPositiveDecimalValidator,
   positiveDecimalValidator,
   positiveIntegerValidator,
   trimDecimalZeros,
@@ -17,6 +19,36 @@ describe('positiveIntegerValidator', () => {
   it('rejects zero, negatives, fractions and junk', () => {
     for (const value of ['0', '-5', '1.5', 'abc', '', null]) {
       expect(positiveIntegerValidator(new FormControl(value))).not.toBeNull();
+    }
+  });
+});
+
+describe('nonNegativeIntegerValidator', () => {
+  it('accepts zero, positive whole numbers and an empty optional value', () => {
+    for (const value of ['0', '1', '15', 42, '', null]) {
+      expect(nonNegativeIntegerValidator(new FormControl(value))).toBeNull();
+    }
+  });
+
+  it('rejects negatives, fractions and junk', () => {
+    for (const value of ['-5', '1.5', 'abc']) {
+      expect(nonNegativeIntegerValidator(new FormControl(value))).not.toBeNull();
+    }
+  });
+});
+
+describe('optionalPositiveDecimalValidator', () => {
+  const validate = optionalPositiveDecimalValidator(2);
+
+  it('accepts an empty value and valid positive decimals', () => {
+    for (const value of ['', null, '1', '0,5', '150.25']) {
+      expect(validate(new FormControl(value))).toBeNull();
+    }
+  });
+
+  it('rejects zero and too many decimals', () => {
+    for (const value of ['0', '1.234']) {
+      expect(validate(new FormControl(value))).not.toBeNull();
     }
   });
 });

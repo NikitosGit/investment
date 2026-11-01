@@ -21,8 +21,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { TextareaModule } from 'primeng/textarea';
 import { finalize, type Observable } from 'rxjs';
 
-import { mapHttpError, formFieldName, validationErrors } from '../../../core/api/api-error';
-import type { ApiError } from '../../../core/api/api-error';
+import { mapHttpError } from '../../../core/api/api-error';
 import type {
   AssetDetail,
   OperationCreateIn,
@@ -40,6 +39,7 @@ import {
 } from '../../../core/formatting/validators';
 import { NotificationService } from '../../../core/services/notification.service';
 import { OperationsService } from '../../../core/services/operations.service';
+import { applyServerFieldErrors } from '../../../shared/forms/server-field-errors';
 import type { SelectOption } from '../../../shared/ui/select-option';
 
 interface OperationSnapshot {
@@ -226,7 +226,7 @@ export class OperationDialogComponent {
     this.serverError.set(apiError.message);
 
     if (apiError.code === 'VALIDATION_ERROR') {
-      this.applyFieldErrors(apiError);
+      applyServerFieldErrors(this.form, apiError, { useBackendMessage: false });
       return;
     }
 
@@ -235,18 +235,6 @@ export class OperationDialogComponent {
         ...(this.form.controls.quantity.errors ?? {}),
         insufficient: true,
       });
-    }
-  }
-
-  private applyFieldErrors(apiError: ApiError): void {
-    for (const fieldError of validationErrors(apiError)) {
-      const control = this.form.get(formFieldName(fieldError.field));
-      if (!control) {
-        continue;
-      }
-
-      control.setErrors({ ...(control.errors ?? {}), server: 'Проверьте значение поля.' });
-      control.markAsTouched();
     }
   }
 

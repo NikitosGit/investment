@@ -1,10 +1,285 @@
 <app-page-header
   title="Доходы"
   subtitle="Выплаченные дивиденды и купоны, а также ожидаемые поступления."
+>
+  <p-button label="Добавить доход" icon="pi pi-plus" (onClick)="openCreate()" />
+</app-page-header>
+
+<section class="income__tabs" aria-label="Статус доходов">
+  <p-tabs #incomeTabs [value]="status()" (valueChange)="onStatusChange($event)">
+    <p-tablist>
+      <p-tab value="PAID">Выплаченные</p-tab>
+      <p-tab value="EXPECTED">Ожидаемые купоны</p-tab>
+    </p-tablist>
+  </p-tabs>
+</section>
+
+<div
+  class="income"
+  role="tabpanel"
+  [attr.id]="incomeTabs.id() + '_tabpanel_' + status()"
+  [attr.aria-labelledby]="incomeTabs.id() + '_tab_' + status()"
+>
+  @if (initialLoading()) {
+    <app-loading-skeleton [cards]="3" [rows]="6" />
+  } @else if (error() && !data()) {
+    <app-error-state [message]="errorMessage()" (retry)="retry()" />
+  } @else if (data(); as incomeData) {
+    <section class="income__totals" aria-labelledby="income-totals-title">
+      <header class="income__totals-head">
+        <h2 id="income-totals-title">Итоги</h2>
+        <p class="income__hint">
+          По всему портфелю · не зависят от выбранной вкладки и фильтров.
+        </p>
+      </header>
+
+      <div class="income__cards">
+        <app-stat-card
+          label="Дивиденды"
+          [value]="incomeData.totals.dividends_paid | money"
+          icon="pi pi-chart-bar"
+          severity="success"
+          hint="По всему портфелю"
+        />
+        <app-stat-card
+          label="Купоны"
+          [value]="incomeData.totals.coupons_paid | money"
+          icon="pi pi-percentage"
+          severity="info"
+          hint="По всему портфелю"
+        />
+        <app-stat-card
+          label="Ожидаемые купоны"
+          [value]="incomeData.totals.expected_coupons | money"
+          icon="pi pi-calendar-clock"
+          severity="warn"
+          hint="По всему портфелю"
+        />
+      </div>
+    </section>
+
+    <section class="income__panel" aria-labelledby="income-filter-title">
+      <header class="income__panel-head">
+        <div>
+          <h2 id="income-filter-title">Фильтры</h2>
+          <p class="income__hint">Применяются сразу к списку доходов.</p>
+        </div>
+      </header>
+
+      <div class="income__filters">
+        <div class="income__field">
+          <label class="income__label" for="income-kind-filter">Тип дохода</label>
+          <p-select
+            inputId="income-kind-filter"
+            [options]="kindOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="kind()"
+            (ngModelChange)="onKindChange($event)"
+            placeholder="Все типы"
+            [showClear]="true"
+            ariaLabel="Фильтр по типу дохода"
+          />
+        </div>
+
+        <div class="income__field">
+          <label class="income__label" for="income-asset-filter">Актив</label>
+          <p-select
+            inputId="income-asset-filter"
+            [options]="assetOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="assetId()"
+            (ngModelChange)="onAssetChange($event)"
+            placeholder="Все активы"
+            [showClear]="true"
+            [filter]="true"
+            filterBy="label"
+            ariaLabel="Фильтр по активу"
+          />
+        </div>
+
+        <div class="income__field">
+          <label class="income__label" for="income-from-filter">Дата выплаты с</label>
+          <p-datepicker
+            inputId="income-from-filter"
+            [ngModel]="from()"
+            (ngModelChange)="onFromChange($event)"
+            dateFormat="dd.mm.yy"
+            [showIcon]="true"
+            [showOnFocus]="false"
+            [showClear]="true"
+            appendTo="body"
+            ariaLabel="Дата выплаты с"
+          />
+        </div>
+
+        <div class="income__field">
+          <label class="income__label" for="income-to-filter">Дата выплаты по</label>
+          <p-datepicker
+            inputId="income-to-filter"
+            [ngModel]="to()"
+            (ngModelChange)="onToChange($event)"
+            dateFormat="dd.mm.yy"
+            [showIcon]="true"
+            [showOnFocus]="false"
+            [showClear]="true"
+            appendTo="body"
+            ariaLabel="Дата выплаты по"
+          />
+        </div>
+
+        <div class="income__filter-actions">
+          <p-button
+            label="Сбросить"
+            icon="pi pi-filter-slash"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="!hasFilters()"
+            (onClick)="resetFilters()"
+          />
+        </div>
+      </div>
+    </section>
+
+    <section class="income__panel" aria-labelledby="income-list-title">
+      <header class="income__panel-head">
+        <div>
+          <h2 id="income-list-title">{{ listHeading() }}</h2>
+          <p class="income__hint">
+            @if (hasFilters()) {
+              Показано по фильтрам: {{ itemCount() }}. Итоги выше — по всему портфелю.
+            } @else {
+              Записей: {{ itemCount() }}.
+            }
+          </p>
+        </div>
+      </header>
+
+      @if (isEmpty()) {
+        <app-empty-state icon="pi pi-wallet" [title]="emptyTitle()" [message]="emptyMessage()">
+          @if (hasFilters()) {
+            <p-button
+              label="Сбросить фильтры"
+              icon="pi pi-filter-slash"
+              severity="secondary"
+              (onClick)="resetFilters()"
+            />
+          } @else if (status() === 'PAID') {
+            <p-button label="Добавить доход" icon="pi pi-plus" (onClick)="openCreate()" />
+          }
+        </app-empty-state>
+      } @else {
+        <div class="income__table-wrap">
+          <p-table
+            [value]="items()"
+            dataKey="id"
+            [scrollable]="true"
+            size="small"
+            styleClass="income-table"
+            [tableStyle]="{ 'min-width': '880px' }"
+            [pt]="{ table: { 'aria-labelledby': 'income-list-title' } }"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th scope="col">Дата выплаты</th>
+                <th scope="col">Тикер</th>
+                <th scope="col">Тип</th>
+                <th scope="col">Статус</th>
+                <th scope="col" class="text-right">Количество</th>
+                <th scope="col" class="text-right">За единицу</th>
+                <th scope="col" class="text-right">Итог</th>
+                <th scope="col">Источник</th>
+                <th scope="col" class="text-right">Действия</th>
+              </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-income>
+              <tr>
+                <td class="income__date">
+                  {{ income.pay_date | date }}
+                  @if (income.is_overdue) {
+                    <p-tag value="Просрочен" severity="warn" [rounded]="true" />
+                  }
+                </td>
+                <td>
+                  <a class="income__asset-link" [routerLink]="['/assets', income.asset_id]">
+                    {{ income.asset_secid }}
+                  </a>
+                </td>
+                <td>{{ incomeKindLabel(income.kind) }}</td>
+                <td>
+                  <p-tag
+                    [value]="incomeStatusLabel(income.status)"
+                    [severity]="income.status === 'PAID' ? 'success' : 'warn'"
+                    [rounded]="true"
+                  />
+                </td>
+                <td class="text-right mono">{{ income.quantity ?? '—' }}</td>
+                <td class="text-right mono">{{ income.amount_per_unit | money }}</td>
+                <td class="text-right mono income__total">{{ income.amount_total | money }}</td>
+                <td>{{ dataSourceLabel(income.source) }}</td>
+                <td class="text-right income__actions">
+                  @if (income.status === 'EXPECTED') {
+                    <p-button
+                      icon="pi pi-check"
+                      severity="success"
+                      [text]="true"
+                      [rounded]="true"
+                      [ariaLabel]="'Подтвердить выплату ' + income.asset_secid"
+                      [attr.title]="'Подтвердить выплату'"
+                      (onClick)="openMarkPaid(income)"
+                    />
+                  }
+                  <p-button
+                    icon="pi pi-pencil"
+                    severity="secondary"
+                    [text]="true"
+                    [rounded]="true"
+                    [ariaLabel]="'Изменить доход ' + income.asset_secid"
+                    [attr.title]="'Изменить доход'"
+                    (onClick)="openEdit(income)"
+                  />
+                  <p-button
+                    icon="pi pi-trash"
+                    severity="danger"
+                    [text]="true"
+                    [rounded]="true"
+                    [loading]="deletingIncomeId() === income.id"
+                    [disabled]="deletingIncomeId() !== null"
+                    [ariaLabel]="'Удалить доход ' + income.asset_secid"
+                    [attr.title]="'Удалить доход'"
+                    (onClick)="deleteIncome(income)"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="income__refreshing" role="status" aria-live="polite">
+          <p-progressSpinner strokeWidth="4" ariaLabel="Обновление доходов" />
+          <span class="visually-hidden">Обновление списка доходов</span>
+        </div>
+      }
+    </section>
+  }
+</div>
+
+<app-income-form-dialog
+  [visible]="formVisible()"
+  (visibleChange)="formVisible.set($event)"
+  [income]="editingIncome()"
+  [assets]="assets()"
+  (saved)="onIncomeSaved($event)"
 />
 
-<app-empty-state
-  icon="pi pi-wallet"
-  title="Доходы будут добавлены на следующем этапе"
-  message="Список выплат и итоги появятся после подключения данных."
+<app-mark-paid-dialog
+  [visible]="markPaidVisible()"
+  (visibleChange)="markPaidVisible.set($event)"
+  [income]="markingPaidIncome()"
+  (paid)="onIncomePaid()"
+  (stale)="onIncomeStale()"
 />

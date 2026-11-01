@@ -13,7 +13,7 @@
 | 0 | Каркас, shell, тема, routing, proxy, API/error/formatting foundation | [x] | [x] |
 | 1 | Data layer + Dashboard | [x] | [x] |
 | 2 | Portfolio + asset search/add + asset detail + operations CRUD | [x] | [x] |
-| 3 | Income | [ ] | [ ] |
+| 3 | Income | [x] | [x] |
 | 4 | Settings/system | [ ] | [ ] |
 | 5 | UX polish, responsive, a11y, ru-RU, E2E | [ ] | [ ] |
 | 6 | Production integration, final tests, docs | [ ] | [ ] |
@@ -762,26 +762,26 @@ frontend/src/app/layout/shell/**        # существующий глобал�
 
 ---
 
-### [ ] Этап 3. Income
+### [x] Этап 3. Income
 
 **Цель:** экран доходов с вкладками, фильтрами, ручным добавлением, подтверждением купона, редактированием и удалением.
 
 **Deliverables**
 
-- [ ] `IncomePage` с вкладками «Выплаченные» / «Ожидаемые купоны».
-- [ ] Запрос `GET /api/income?status=PAID|EXPECTED`; смена вкладки меняет `status`.
-- [ ] Фильтры: `kind` (DIVIDEND/COUPON), `asset_id`, `from`, `to`; кнопка «Сбросить».
-- [ ] Таблица: дата выплаты, тикер, тип, статус, количество, сумма за единицу, итог, источник, overdue.
-- [ ] Карточка итогов: дивиденды, купоны, ожидаемые купоны; подпись «По всему портфелю».
-- [ ] Диалог ручного дохода: kind, asset, amount_total, pay_date, quantity (optional), amount_per_unit (optional), record_date (optional), note.
-- [ ] `POST /api/income`; всегда PAID; после успеха — reload и toast.
-- [ ] Редактирование PAID: amount_total, quantity, pay_date, note; total авторитетен.
-- [ ] Подтверждение EXPECTED: диалог с prefill `amount_total` и `pay_date`; `POST /mark-paid`.
-- [ ] Обработка `409 INCOME_ALREADY_PAID`; reload.
-- [ ] Редактирование EXPECTED: только note/record_date; не показывать редактирование суммы/даты, если backend их запрещает.
-- [ ] Удаление дохода с confirm; EXPECTED — предупреждение, что MOEX может синхронизировать снова.
-- [ ] Overdue badge для `is_overdue=true`.
-- [ ] EmptyState для каждой вкладки; ErrorState с retry.
+- [x] `IncomePage` с вкладками «Выплаченные» / «Ожидаемые купоны».
+- [x] Запрос `GET /api/income?status=PAID|EXPECTED`; смена вкладки меняет `status`.
+- [x] Фильтры: `kind` (DIVIDEND/COUPON), `asset_id`, `from`, `to`; кнопка «Сбросить».
+- [x] Таблица: дата выплаты, тикер, тип, статус, количество, сумма за единицу, итог, источник, overdue.
+- [x] Карточка итогов: дивиденды, купоны, ожидаемые купоны; подпись «По всему портфелю».
+- [x] Диалог ручного дохода: kind, asset, amount_total, pay_date, quantity (optional), amount_per_unit (optional), record_date (optional), note.
+- [x] `POST /api/income`; всегда PAID; после успеха — reload и toast.
+- [x] Редактирование PAID: amount_total, quantity, pay_date, note; total авторитетен.
+- [x] Подтверждение EXPECTED: диалог с prefill `amount_total` и `pay_date`; `POST /mark-paid`.
+- [x] Обработка `409 INCOME_ALREADY_PAID`; reload.
+- [x] Редактирование EXPECTED: только note/record_date; не показывать редактирование суммы/даты, если backend их запрещает.
+- [x] Удаление дохода с confirm; EXPECTED — предупреждение, что MOEX может синхронизировать снова.
+- [x] Overdue badge для `is_overdue=true`.
+- [x] EmptyState для каждой вкладки; ErrorState с retry.
 
 **Files/areas**
 
@@ -803,32 +803,32 @@ frontend/src/app/shared/ui/stat-card/**
 
 **Acceptance criteria**
 
-- [ ] Вкладка PAID показывает дивиденд `200.00` и купон `525.00`.
-- [ ] Вкладка EXPECTED показывает 3 купона по `525.00`, итог `1575.00`.
-- [ ] Фильтр по облигации/типу работает; totals не меняются и подписаны как портфельные.
-- [ ] Ручной дивиденд `150.00` появляется в PAID.
-- [ ] Mark-paid переводит EXPECTED в PAID; повторный вызов показывает 409.
-- [ ] Редактирование суммы PAID обновляет `amount_per_unit`.
-- [ ] Удаление работает; overdue отображается.
-- [ ] Нет клиентского расчёта суммы купона.
+- [x] Вкладка PAID показывает дивиденд `200.00` и купон `525.00`.
+- [x] Вкладка EXPECTED показывает 3 купона по `525.00`, итог `1575.00` (seed-данные; live-БД разошлась после MOEX-синхронизации).
+- [x] Фильтр по облигации/типу работает; totals не меняются и подписаны как портфельные.
+- [x] Ручной дивиденд `150.00` появляется в PAID.
+- [x] Mark-paid переводит EXPECTED в PAID; повторный вызов показывает 409.
+- [x] Редактирование суммы PAID обновляет `amount_per_unit`.
+- [x] Удаление работает; overdue отображается.
+- [x] Нет клиентского расчёта суммы купона.
 
 **Tests**
 
-- [ ] Unit: `IncomeService.list` формирует query params; mark-paid payload.
-- [ ] Unit: обработка `INCOME_ALREADY_PAID`.
-- [ ] Component: переключение вкладок и фильтры.
-- [ ] Component: форма ручного дохода (обязательные поля).
-- [ ] Component: mark-paid prefill и успешный reload.
-- [ ] Component: overdue badge; totals label.
+- [x] Unit: `IncomeService.list` формирует query params; mark-paid payload.
+- [x] Unit: обработка `INCOME_ALREADY_PAID`.
+- [x] Component: переключение вкладок и фильтры.
+- [x] Component: форма ручного дохода (обязательные поля).
+- [x] Component: mark-paid prefill и успешный reload.
+- [x] Component: overdue badge; totals label.
 
 **Review checkpoint**
 
-- [ ] Ревью семантики PAID/EXPECTED: total авторитетен, expected нельзя редактировать как paid.
-- [ ] Ревью filters/totals: totals портфельные, не фильтрованные.
-- [ ] Ревью ошибок 409/422.
-- [ ] Ревью UX подтверждения выплаты.
+- [x] Ревью семантики PAID/EXPECTED: total авторитетен, expected нельзя редактировать как paid.
+- [x] Ревью filters/totals: totals портфельные, не фильтрованные.
+- [x] Ревью ошибок 409/422.
+- [x] Ревью UX подтверждения выплаты.
 
-**Review findings / status:** _не заполнено; заполняется после ревью._
+**Review findings / status:** **PASS после исправлений** — 2026-11-01, ревью по skill `code-review-and-quality`. Исправлено в ходе ревью: (R1) таблица доходов получила доступное имя через `aria-labelledby` (`pt.table`); (O1) смена/сброс фильтров сбрасывает данные, поэтому ошибка запроса показывает ErrorState, а не старые строки; (O2) `retry()` перезагружает список активов и доходы, предупреждение по активам не дублируется; (O3) специальная обработка 409 только для `INCOME_ALREADY_PAID`, остальные 409 остаются в диалоге как `serverError`; (O4) общий `applyServerFieldErrors` вынесен в `shared/forms` и используется в operation/income/mark-paid диалогах, построение asset options — в `features/income/income-options.ts`; (N1) постоянный `role="tabpanel"` существует во всех состояниях, `aria-controls` не висит; (N2) guard повторного delete и блокировка кнопок на время удаления; (N4) добавлены тесты на портфельные totals под фильтрами, reload после edit, 400 при edit PAID и generic 409 в mark-paid. Проверки: **207 Karma-тестов** в Chrome headless (Edge через `CHROME_BIN`), `npm run build`; live read-only проверка `/income`: PAID `200.00`/`525.00`, портфельные totals, вкладки, фильтры, empty/error, диалоги, confirm удаления и `aria-labelledby` таблицы, консоль без ошибок. Данные: live-БД после MOEX-синхронизации содержит 13 EXPECTED-купонов и total `6885.00` вместо seed `3`/`1575.00` — это дрейф данных, не дефект UI; в тестах используются seed-значения. Осознанно отложено до Stage 5: полный a11y/keyboard/responsive-аудит и живые мутации create/edit/delete/mark-paid (покрыты unit-тестами).
 
 ---
 
@@ -1138,6 +1138,7 @@ docs/FRONTEND_HANDOFF.md
 | 2026-10-30 | 0 | Этап 0 завершён и прошёл независимое ревью (**PASS**): Angular 20.3.34 + PrimeNG 20.4.0 (MIT) shell, тема, routing, proxy, API/error/formatting foundation; 70 Karma-тестов, `npm run build`, `npm audit --omit=dev` — 0 vulnerabilities | — |
 | 2026-11-01 | 1 | Этап 1 завершён и прошёл ревью (**PASS после исправлений**): сервисы Dashboard/Positions/Portfolio/Settings, дашборд с 5 карточками, графиком, позициями и купонами; runtime guard периода, исправлены высота/подписи графика; 95 Karma-тестов, `npm run build`, живая проверка seeded API и 360/1280 px | — |
 | 2026-11-01 | 2 | Этап 2 завершён и прошёл ревью (**PASS после исправлений**): портфель с фильтром и поиском MOEX, карточка актива, операции BUY/SELL, доходы и история цен; shared-таблица позиций, guards от stale-ответов, 161 Karma-тест, build, live 1280/360, oversell 409, поиск SBER и edit-prefill | — |
+| 2026-11-01 | 3 | Этап 3 завершён и прошёл ревью (PASS после исправлений): доходы PAID/EXPECTED, серверные фильтры, портфельные totals, ручной доход, edit PAID/EXPECTED, mark-paid + 409, delete confirm; 207 Karma-тестов, build, live /income | — |
 | 2026-11-01 | backend | Исправлен MOEX ISS: `/securities/{secid}.json` теперь `description`+`boards`; LOTSIZE из board-endpoint, INITIALFACEVALUE/FACEVALUE и amortdate; live add/delete GAZP проверены, 478 backend tests | — |
 
 ### 12.2. Результаты ревью
@@ -1149,7 +1150,7 @@ docs/FRONTEND_HANDOFF.md
 | 0 | 2026-10-30 | PASS | 0 Critical / 0 Required; R1–R5 исправлены; визуальные pixel-check и a11y-аудит отложены до Stage 5 | [x] |
 | 1 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R5 исправлены (guard периода, мёртвый код, англоязычный бейдж, интерполяция/высота/подписи графика); добавлены тесты late response и unknown period | [x] |
 | 2 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R9 исправлены (shared-таблица, отмена поиска, secid+board, stale guards, datepicker, trim цены, ariaLabel, ширина таблиц, empty state); backend MOEX ISS fix выполнен и live-проверен; ОФЗ TQOB — отдельное ограничение MVP | [x] |
-| 3 | — | — | — | [ ] |
+| 3 | 2026-11-01 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O4 + N1/N2/N4 закрыты; live read-only /income; данные live-БД разошлись с seed из-за MOEX-синхронизации | [x] |
 | 4 | — | — | — | [ ] |
 | 5 | — | — | — | [ ] |
 | 6 | — | — | — | [ ] |

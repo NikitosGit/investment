@@ -1,0 +1,244 @@
+<p-dialog
+  [header]="title()"
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [style]="{ width: '620px' }"
+  [breakpoints]="{ '700px': '95vw' }"
+  styleClass="income-form-dialog"
+>
+  <form class="income-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (isEdit()) {
+      <div class="income-form__summary">
+        <dl>
+          <div>
+            <dt>Актив</dt>
+            <dd>{{ assetLabel() }}</dd>
+          </div>
+          <div>
+            <dt>Тип</dt>
+            <dd>{{ kindLabel() }}</dd>
+          </div>
+          <div>
+            <dt>Статус</dt>
+            <dd>{{ statusLabel() }}</dd>
+          </div>
+          @if (isExpectedEdit()) {
+            <div>
+              <dt>Ожидаемая сумма</dt>
+              <dd class="mono">{{ income()?.amount_total | money }}</dd>
+            </div>
+            <div>
+              <dt>Количество</dt>
+              <dd class="mono">{{ income()?.quantity ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Дата выплаты</dt>
+              <dd>{{ income()?.pay_date | date }}</dd>
+            </div>
+          }
+        </dl>
+
+        @if (isExpectedEdit()) {
+          <p class="income-form__hint">
+            Сумма, количество и дата выплаты ожидаемого купона рассчитываются backend и на
+            расписании MOEX. Здесь можно изменить только комментарий и дату фиксации.
+          </p>
+        } @else {
+          <p class="income-form__hint">
+            Итоговая сумма авторитетна: сумму за единицу backend пересчитает из итога.
+          </p>
+        }
+      </div>
+    }
+
+    @if (!isEdit()) {
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-kind">Тип дохода</label>
+        <p-select
+          inputId="income-form-kind"
+          formControlName="kind"
+          [options]="kindOptions"
+          optionLabel="label"
+          optionValue="value"
+          ariaLabel="Тип дохода"
+        />
+      </div>
+
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-asset">Актив</label>
+        <p-select
+          inputId="income-form-asset"
+          formControlName="asset_id"
+          [options]="assetOptions()"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Выберите актив"
+          [filter]="true"
+          filterBy="label"
+          [attr.aria-describedby]="showError('asset_id') ? 'income-form-asset-error' : null"
+        />
+        @if (showError('asset_id')) {
+          <small id="income-form-asset-error" class="income-form__error">
+            {{ errorText('asset_id') }}
+          </small>
+        }
+      </div>
+    }
+
+    @if (!isExpectedEdit()) {
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-total">Сумма дохода, ₽</label>
+        <input
+          pInputText
+          id="income-form-total"
+          formControlName="amount_total"
+          inputmode="decimal"
+          autocomplete="off"
+          [attr.aria-describedby]="showError('amount_total') ? 'income-form-total-error' : 'income-form-total-hint'"
+        />
+        @if (showError('amount_total')) {
+          <small id="income-form-total-error" class="income-form__error">
+            {{ errorText('amount_total') }}
+          </small>
+        } @else {
+          <small id="income-form-total-hint" class="income-form__hint">
+            Итоговая сумма, больше нуля, до 2 знаков после запятой.
+          </small>
+        }
+      </div>
+
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-pay-date">Дата выплаты</label>
+        <p-datepicker
+          inputId="income-form-pay-date"
+          formControlName="pay_date"
+          dateFormat="dd.mm.yy"
+          [showIcon]="true"
+          [showOnFocus]="false"
+          appendTo="body"
+          styleClass="income-form__datepicker"
+        />
+        @if (showError('pay_date')) {
+          <small id="income-form-pay-date-error" class="income-form__error">
+            {{ errorText('pay_date') }}
+          </small>
+        }
+      </div>
+
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-quantity">
+          Количество, шт. @if (!isEdit()) { <span class="income-form__optional">(необязательно)</span> }
+        </label>
+        <input
+          pInputText
+          id="income-form-quantity"
+          formControlName="quantity"
+          inputmode="numeric"
+          autocomplete="off"
+          [attr.aria-describedby]="showError('quantity') ? 'income-form-quantity-error' : 'income-form-quantity-hint'"
+        />
+        @if (showError('quantity')) {
+          <small id="income-form-quantity-error" class="income-form__error">
+            {{ errorText('quantity') }}
+          </small>
+        } @else {
+          <small id="income-form-quantity-hint" class="income-form__hint">
+            @if (isEdit()) {
+              Целое неотрицательное число.
+            } @else {
+              Если не указать — backend подставит текущее количество по активу.
+            }
+          </small>
+        }
+      </div>
+    }
+
+    @if (!isEdit()) {
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-per-unit">
+          Сумма за единицу, ₽ <span class="income-form__optional">(необязательно)</span>
+        </label>
+        <input
+          pInputText
+          id="income-form-per-unit"
+          formControlName="amount_per_unit"
+          inputmode="decimal"
+          autocomplete="off"
+          [attr.aria-describedby]="showError('amount_per_unit') ? 'income-form-per-unit-error' : 'income-form-per-unit-hint'"
+        />
+        @if (showError('amount_per_unit')) {
+          <small id="income-form-per-unit-error" class="income-form__error">
+            {{ errorText('amount_per_unit') }}
+          </small>
+        } @else {
+          <small id="income-form-per-unit-hint" class="income-form__hint">
+            Итог авторитетен; значение за единицу backend выведет из итога.
+          </small>
+        }
+      </div>
+    }
+
+    @if (!isPaidEdit()) {
+      <div class="income-form__field">
+        <label class="income-form__label" for="income-form-record-date">
+          Дата фиксации <span class="income-form__optional">(необязательно)</span>
+        </label>
+        <p-datepicker
+          inputId="income-form-record-date"
+          formControlName="record_date"
+          dateFormat="dd.mm.yy"
+          [showIcon]="true"
+          [showOnFocus]="false"
+          [showClear]="true"
+          appendTo="body"
+          styleClass="income-form__datepicker"
+        />
+      </div>
+    }
+
+    <div class="income-form__field">
+      <label class="income-form__label" for="income-form-note">Комментарий</label>
+      <textarea
+        pTextarea
+        id="income-form-note"
+        formControlName="note"
+        rows="3"
+        maxlength="500"
+        [attr.aria-describedby]="showError('note') ? 'income-form-note-error' : 'income-form-note-hint'"
+      ></textarea>
+      @if (showError('note')) {
+        <small id="income-form-note-error" class="income-form__error">
+          {{ errorText('note') }}
+        </small>
+      } @else {
+        <small id="income-form-note-hint" class="income-form__hint">Не больше 500 символов.</small>
+      }
+    </div>
+
+    @if (serverError(); as message) {
+      <p-message severity="error" styleClass="income-form__message">{{ message }}</p-message>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      [label]="isEdit() ? 'Сохранить' : 'Создать'"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>
