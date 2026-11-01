@@ -14,6 +14,7 @@ from app.providers.moex.mapper import (
     parse_history,
     parse_search_results,
     parse_security_info,
+    requires_board_details,
     table_rows,
 )
 
@@ -60,6 +61,257 @@ def test_security_info_rejects_foreign_currency(load_fixture: Any) -> None:
 
 def test_security_info_returns_none_for_unknown_board(load_fixture: Any) -> None:
     assert parse_security_info(load_fixture("moex", "security_sber.json"), board="TQXX") is None
+
+
+def test_security_info_parses_current_description_and_boards(load_fixture: Any) -> None:
+    """Current ISS responses use ``description`` + ``boards``, not ``securities``."""
+
+    payload = load_fixture("moex", "security_gazp.json")
+    assert "securities" not in payload
+
+    info = parse_security_info(
+        payload,
+        board="TQBR",
+        board_payload=load_fixture("moex", "security_gazp_board.json"),
+    )
+
+    assert info is not None
+    assert info.secid == "GAZP"
+    assert info.board == "TQBR"
+    assert info.type is AssetType.STOCK
+    assert info.lot_size == 10
+    assert info.isin == "RU0007661625"
+    assert info.name == '"Газпром" (ПАО) ао'
+    assert info.face_value_kopecks == 500
+
+
+def test_security_info_current_shape_prefers_primary_board(load_fixture: Any) -> None:
+    info = parse_security_info(load_fixture("moex", "security_gazp.json"))
+
+    assert info is not None
+    assert info.board == "TQBR"
+    assert info.type is AssetType.STOCK
+    # Board-specific LOTSIZE is only available from the board endpoint.
+    assert info.lot_size == 1
+
+
+def test_security_info_current_shape_selects_primary_board_not_first_row(
+    load_fixture: Any,
+) -> None:
+    """Board selection must not depend on the order of ``boards.data``."""
+
+    payload = load_fixture("moex", "security_gazp.json")
+    payload["boards"]["data"].reverse()
+    # A traded but non-primary board is now the first row.
+    assert payload["boards"]["data"][0][1] == "RPEY"
+
+    info = parse_security_info(payload)
+
+    assert info is not None
+    assert info.board == "TQBR"
+    assert info.type is AssetType.STOCK
+
+
+def test_security_info_current_shape_rejects_unknown_board(load_fixture: Any) -> None:
+    assert parse_security_info(load_fixture("moex", "security_gazp.json"), board="TQCB") is None
+
+
+def test_security_info_current_shape_prefers_initial_face_value() -> None:
+    """``FACEVALUE`` is the current value; the asset needs the initial one."""
+
+    payload = {
+        "description": {
+            "columns": ["name", "value"],
+            "data": [
+                ["SECID", "BOND"],
+                ["NAME", "Амортизируемая облигация"],
+                ["TYPE", "exchange_bond"],
+                ["FACEVALUE", "600"],
+                ["INITIALFACEVALUE", "1000"],
+                ["FACEUNIT", "SUR"],
+            ],
+        },
+        "boards": {
+            "columns": ["secid", "boardid", "is_traded", "is_primary"],
+            "data": [["BOND", "TQCB", 1, 1]],
+        },
+    }
+    board_payload = {
+        "securities": {
+            "columns": ["SECID", "BOARDID", "LOTSIZE", "FACEVALUE", "FACEUNIT"],
+            "data": [["BOND", "TQCB", 5, 600, "SUR"]],
+        }
+    }
+
+    info = parse_security_info(payload, board="TQCB", board_payload=board_payload)
+
+    assert info is not None
+    assert info.type is AssetType.BOND
+    assert info.face_value_kopecks == 100_000
+    assert info.lot_size == 5
+    # The board endpoint must not replace the original face value.
+    assert info.raw["FACEVALUE"] == "1000"
+    assert info.raw["FACEUNIT"] == "SUR"
+
+
+def test_security_info_falls_back_to_card_when_board_is_missing_from_securities() -> None:
+    """A legacy ``securities`` table may not contain the requested board."""
+
+    payload = {
+        "securities": {
+            "columns": ["SECID", "BOARDID", "SECNAME", "TYPE", "LOTSIZE", "FACEVALUE"],
+            "data": [["BOND", "TQBR", "Акция", "common_share", 10, 5]],
+        },
+        "description": {
+            "columns": ["name", "value"],
+            "data": [
+                ["SECID", "BOND"],
+                ["NAME", "Облигация"],
+                ["TYPE", "exchange_bond"],
+                ["INITIALFACEVALUE", "1000"],
+                ["FACEUNIT", "SUR"],
+            ],
+        },
+        "boards": {
+            "columns": ["secid", "boardid", "is_traded", "is_primary"],
+            "data": [["BOND", "TQCB", 1, 1]],
+        },
+    }
+
+    info = parse_security_info(payload, board="TQCB")
+
+    assert info is not None
+    assert info.board == "TQCB"
+    assert info.type is AssetType.BOND
+    assert info.face_value_kopecks == 100_000
+
+
+def test_requires_board_details_detects_current_shape(load_fixture: Any) -> None:
+    payload = load_fixture("moex", "security_gazp.json")
+
+    assert requires_board_details(payload, "TQBR") is True
+    assert requires_board_details(payload, "TQCB") is False
+    assert requires_board_details(payload, None) is False
+    assert requires_board_details(load_fixture("moex", "security_sber.json"), "TQBR") is False
+
+
+def test_requires_board_details_mixed_shape_needs_missing_board() -> None:
+    """A ``securities`` table without the requested board still needs details."""
+
+    payload = {
+        "securities": {
+            "columns": ["SECID", "BOARDID"],
+            "data": [["BOND", "TQBR"]],
+        },
+        "boards": {
+            "columns": ["secid", "boardid"],
+            "data": [["BOND", "TQBR"], ["BOND", "TQCB"]],
+        },
+    }
+
+    assert requires_board_details(payload, "TQCB") is True
+    assert requires_board_details(payload, "TQBR") is False
+
+
+def test_merge_board_details_keeps_face_unit_from_description() -> None:
+    """A board-level currency must not replace the card's face currency."""
+
+    payload = {
+        "description": {
+            "columns": ["name", "value"],
+            "data": [
+                ["SECID", "BOND"],
+                ["NAME", "Облигация"],
+                ["TYPE", "exchange_bond"],
+                ["INITIALFACEVALUE", "1000"],
+                ["FACEUNIT", "SUR"],
+            ],
+        },
+        "boards": {
+            "columns": ["secid", "boardid", "is_traded", "is_primary"],
+            "data": [["BOND", "TQCB", 1, 1]],
+        },
+    }
+    board_payload = {
+        "securities": {
+            "columns": ["SECID", "BOARDID", "LOTSIZE", "FACEVALUE", "FACEUNIT"],
+            "data": [["BOND", "TQCB", 1, 600, "CNY"]],
+        }
+    }
+
+    info = parse_security_info(payload, board="TQCB", board_payload=board_payload)
+
+    assert info is not None
+    assert info.face_value_kopecks == 100_000
+    assert info.raw["FACEUNIT"] == "SUR"
+    assert info.raw["FACEVALUE"] == "1000"
+
+
+def test_merge_board_details_filters_by_requested_board() -> None:
+    """Only the row of the requested board may contribute board fields."""
+
+    payload = {
+        "description": {
+            "columns": ["name", "value"],
+            "data": [
+                ["SECID", "BOND"],
+                ["NAME", "Облигация"],
+                ["TYPE", "exchange_bond"],
+                ["INITIALFACEVALUE", "1000"],
+                ["FACEUNIT", "SUR"],
+            ],
+        },
+        "boards": {
+            "columns": ["secid", "boardid", "is_traded", "is_primary"],
+            "data": [["BOND", "TQCB", 1, 1]],
+        },
+    }
+    board_payload = {
+        "securities": {
+            "columns": ["SECID", "BOARDID", "LOTSIZE", "FACEVALUE", "FACEUNIT"],
+            "data": [
+                ["BOND", "TQBR", 10, 1000, "SUR"],
+                ["BOND", "TQCB", 5, 600, "SUR"],
+            ],
+        }
+    }
+
+    info = parse_security_info(payload, board="TQCB", board_payload=board_payload)
+
+    assert info is not None
+    assert info.lot_size == 5
+
+
+def test_merge_board_details_does_not_restore_empty_face_value() -> None:
+    """An empty card value must not hide a usable board-level value."""
+
+    payload = {
+        "description": {
+            "columns": ["name", "value"],
+            "data": [
+                ["SECID", "BOND"],
+                ["NAME", "Облигация"],
+                ["TYPE", "exchange_bond"],
+                ["FACEVALUE", ""],
+                ["FACEUNIT", "SUR"],
+            ],
+        },
+        "boards": {
+            "columns": ["secid", "boardid", "is_traded", "is_primary"],
+            "data": [["BOND", "TQCB", 1, 1]],
+        },
+    }
+    board_payload = {
+        "securities": {
+            "columns": ["SECID", "BOARDID", "LOTSIZE", "FACEVALUE", "FACEUNIT"],
+            "data": [["BOND", "TQCB", 1, 600, "SUR"]],
+        }
+    }
+
+    info = parse_security_info(payload, board="TQCB", board_payload=board_payload)
+
+    assert info is not None
+    assert info.face_value_kopecks == 60_000
 
 
 def test_security_info_rejects_malformed_face_value() -> None:
@@ -128,6 +380,16 @@ def test_bondization_parses_coupons_and_amortizations(load_fixture: Any) -> None
     assert bondization.amortizations[0].amount_per_unit_kopecks == 20_000
 
 
+def test_bondization_parses_live_amortdate_column(load_fixture: Any) -> None:
+    """Live ISS bondization names the amortization date ``amortdate``."""
+
+    bondization = parse_bondization(load_fixture("moex", "bondization_ru000a10g5k5.json"))
+
+    assert [
+        (item.amortization_date, item.amount_per_unit_kopecks) for item in bondization.amortizations
+    ] == [(date(2031, 8, 23), 100_000)]
+
+
 def test_table_rows_handles_missing_table() -> None:
     assert table_rows({}, "history") == []
 
@@ -174,6 +436,32 @@ def test_security_info_detects_bond_from_type_field() -> None:
     assert info is not None
     assert info.type is AssetType.BOND
     assert info.face_value_kopecks == 100_000
+
+
+def test_security_info_current_shape_reads_bond_face_value() -> None:
+    payload = {
+        "description": {
+            "columns": ["name", "value"],
+            "data": [
+                ["SECID", "BOND"],
+                ["NAME", "Облигация"],
+                ["TYPE", "ofz_bond"],
+                ["INITIALFACEVALUE", "1000"],
+                ["FACEUNIT", "SUR"],
+            ],
+        },
+        "boards": {
+            "columns": ["secid", "boardid", "is_traded", "is_primary"],
+            "data": [["BOND", "TQCB", 1, 1]],
+        },
+    }
+
+    info = parse_security_info(payload, board="TQCB")
+
+    assert info is not None
+    assert info.type is AssetType.BOND
+    assert info.face_value_kopecks == 100_000
+    assert info.lot_size == 1
 
 
 def test_current_quote_without_matching_secid_uses_first_row() -> None:

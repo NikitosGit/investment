@@ -74,6 +74,27 @@ def test_get_security_info_raises_not_found(make_client: Callable[..., MoexClien
 
 
 @respx.mock
+def test_get_security_info_current_shape_fetches_board_details(
+    make_client: Callable[..., MoexClient], load_fixture: Any
+) -> None:
+    general = respx.get(f"{BASE_URL}/securities/GAZP.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp.json"))
+    )
+    board = respx.get(
+        f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/GAZP.json"
+    ).mock(return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp_board.json")))
+
+    info = make_client().get_security_info("GAZP", board="TQBR")
+
+    assert info.secid == "GAZP"
+    assert info.board == "TQBR"
+    assert info.type is AssetType.STOCK
+    assert info.lot_size == 10
+    assert len(general.calls) == 1
+    assert len(board.calls) == 1
+
+
+@respx.mock
 def test_current_quote_prefers_available_field(
     make_client: Callable[..., MoexClient], load_fixture: Any
 ) -> None:

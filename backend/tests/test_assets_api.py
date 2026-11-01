@@ -27,7 +27,7 @@ from app.db.models.operation import Operation
 from app.db.models.quote import Quote
 from app.services import asset_service, bondization_service, portfolio_service
 
-from asset_helpers import BASE_URL, stub_quotes  # isort: skip
+from asset_helpers import BASE_URL, EMPTY_HISTORY, stub_quotes  # isort: skip
 
 FIXED_TODAY = date(2026, 1, 1)
 
@@ -105,6 +105,38 @@ def test_create_stock_persists_and_lists(
 
     detail = client.get(f"/api/assets/{body['id']}").json()
     assert detail["name"] == "Сбербанк России ПАО ао"
+
+
+@respx.mock
+def test_create_stock_from_current_moex_shape(
+    client: TestClient, db_session: Session, load_fixture: Callable[..., Any]
+) -> None:
+    """MOEX now returns ``description``/``boards`` plus board-specific details."""
+
+    respx.get(f"{BASE_URL}/securities/GAZP.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp.json"))
+    )
+    respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/GAZP.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp_board.json"))
+    )
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/shares/boards/TQBR/securities/GAZP.json"
+    ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
+
+    response = client.post("/api/assets", json={"secid": "GAZP", "board": "TQBR"})
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["secid"] == "GAZP"
+    assert body["type"] == "STOCK"
+    assert body["board"] == "TQBR"
+    assert body["lot_size"] == 10
+    assert body["isin"] == "RU0007661625"
+
+    db_session.rollback()
+    stored = db_session.scalars(select(Asset)).one()
+    assert stored.secid == "GAZP"
+    assert stored.lot_size == 10
 
 
 @respx.mock
@@ -191,6 +223,143 @@ def test_create_bond_with_schedule(
     assert all(coupon.kind is IncomeKind.COUPON for coupon in coupons)
     assert all(coupon.status is IncomeStatus.EXPECTED for coupon in coupons)
     assert all(coupon.source.value == "MOEX" for coupon in coupons)
+
+
+@respx.mock
+def test_create_bond_from_current_moex_shape(
+    client: TestClient,
+    db_session: Session,
+    fixed_today: None,
+    load_fixture: Callable[..., Any],
+) -> None:
+    """A corporate TQCB bond is created from the live ``description``/``boards`` shape."""
+
+    secid = "RU000A10G5K5"
+    respx.get(f"{BASE_URL}/securities/{secid}.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_ru000a10g5k5.json"))
+    )
+    board_route = respx.get(
+        f"{BASE_URL}/engines/stock/markets/bonds/boards/TQCB/securities/{secid}.json"
+    ).mock(
+        return_value=httpx.Response(
+            200, json=load_fixture("moex", "security_ru000a10g5k5_board.json")
+        )
+    )
+    respx.get(f"{BASE_URL}/securities/{secid}/bondization.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "bondization_ru000a10g5k5.json"))
+    )
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQCB/securities/{secid}.json"
+    ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
+
+    response = client.post("/api/assets", json={"secid": secid, "board": "TQCB"})
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["secid"] == secid
+    assert body["type"] == "BOND"
+    assert body["board"] == "TQCB"
+    assert body["lot_size"] == 1
+    assert body["isin"] == secid
+    assert body["initial_face_value"] == "1000.00"
+    assert body["current_face_value"] == "1000.00"
+    assert [
+        (item["amortization_date"], item["amount_per_unit"]) for item in body["amortizations"]
+    ] == [("2031-08-23", "1000.00")]
+
+    # The general endpoint has no board row: details and the intraday quote are
+    # both served by the same board endpoint.
+    assert len(board_route.calls) == 2
+
+    db_session.rollback()
+    stored = db_session.scalars(select(Asset)).one()
+    assert stored.secid == secid
+    assert stored.type is AssetType.BOND
+    assert stored.lot_size == 1
+    assert stored.initial_face_value_kopecks == 100_000
+    # Coupons from the same bondization response were persisted.
+    assert db_session.scalars(select(func.count()).select_from(Income)).one() > 0
+
+
+@respx.mock
+def test_refresh_bond_from_current_moex_shape(
+    client: TestClient,
+    db_session: Session,
+    fixed_today: None,
+    load_fixture: Callable[..., Any],
+) -> None:
+    """Refresh keeps working when MOEX returns ``description``/``boards``."""
+
+    secid = "RU000A10G5K5"
+    # After a hypothetical amortization the current face value drops, while the
+    # original one must stay in the asset.
+    original_security = load_fixture("moex", "security_ru000a10g5k5.json")
+    amortized_security = load_fixture("moex", "security_ru000a10g5k5.json")
+    for row in amortized_security["description"]["data"]:
+        if row[0] == "FACEVALUE":
+            row[2] = "600"
+    original_board = load_fixture("moex", "security_ru000a10g5k5_board.json")
+    amortized_board = load_fixture("moex", "security_ru000a10g5k5_board.json")
+    face_value_index = amortized_board["securities"]["columns"].index("FACEVALUE")
+    amortized_board["securities"]["data"][0][face_value_index] = 600
+
+    security_route = respx.get(f"{BASE_URL}/securities/{secid}.json").mock(
+        side_effect=[
+            httpx.Response(200, json=original_security),
+            httpx.Response(200, json=amortized_security),
+        ]
+    )
+    # Creation fetches board details and a quote; refresh repeats both.
+    respx.get(f"{BASE_URL}/engines/stock/markets/bonds/boards/TQCB/securities/{secid}.json").mock(
+        side_effect=[
+            httpx.Response(200, json=original_board),
+            httpx.Response(200, json=original_board),
+            httpx.Response(200, json=amortized_board),
+            httpx.Response(200, json=amortized_board),
+        ]
+    )
+    original_bondization = load_fixture("moex", "bondization_ru000a10g5k5.json")
+    refreshed_bondization = load_fixture("moex", "bondization_ru000a10g5k5.json")
+    # Add an amortization that has already happened by the fixed test date.
+    amortization_columns = refreshed_bondization["amortizations"]["columns"]
+    amortization_row = refreshed_bondization["amortizations"]["data"][0]
+    for field, value in {
+        "amortdate": "2025-12-01",
+        "value": "400",
+        "value_rub": "400",
+        "valueprc": "40",
+    }.items():
+        amortization_row[amortization_columns.index(field)] = value
+    respx.get(f"{BASE_URL}/securities/{secid}/bondization.json").mock(
+        side_effect=[
+            httpx.Response(200, json=original_bondization),
+            httpx.Response(200, json=refreshed_bondization),
+        ]
+    )
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQCB/securities/{secid}.json"
+    ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
+
+    asset_id = client.post("/api/assets", json={"secid": secid, "board": "TQCB"}).json()["id"]
+
+    response = client.post(f"/api/assets/{asset_id}/refresh")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["secid"] == secid
+    assert body["type"] == "BOND"
+    assert body["lot_size"] == 1
+    assert body["initial_face_value"] == "1000.00"
+    # 1000 initial minus the 400 amortization already in the past.
+    assert body["current_face_value"] == "600.00"
+    assert [
+        (item["amortization_date"], item["amount_per_unit"]) for item in body["amortizations"]
+    ] == [("2025-12-01", "400.00"), ("2031-08-23", "1000.00")]
+    assert len(security_route.calls) == 2
+
+    db_session.rollback()
+    stored = db_session.scalars(select(Asset)).one()
+    assert stored.initial_face_value_kopecks == 100_000
 
 
 @respx.mock

@@ -9,6 +9,7 @@ import threading
 import time
 from datetime import date
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -104,10 +105,24 @@ class MoexClient:
         return mapper.parse_search_results(payload)
 
     def get_security_info(self, secid: str, board: str | None = None) -> SecurityInfo:
-        """Fetch metadata for a single security."""
+        """Fetch metadata for a single security.
 
-        payload = self._get(f"/securities/{secid}.json")
-        info = mapper.parse_security_info(payload, board=board)
+        Current ISS responses describe a security through ``description`` and
+        ``boards`` tables and no longer embed the board-specific
+        ``securities`` row. When that row is missing, board fields such as
+        ``LOTSIZE`` are fetched from the board endpoint.
+        """
+
+        payload = self._get(f"/securities/{quote(secid, safe='')}.json")
+        board_payload: dict[str, Any] | None = None
+        if board is not None and mapper.requires_board_details(payload, board):
+            market = mapper.BOARD_MARKETS.get(board)
+            if market is not None:
+                board_payload = self._get(
+                    f"/engines/stock/markets/{market}/boards/{quote(board, safe='')}"
+                    f"/securities/{quote(secid, safe='')}.json"
+                )
+        info = mapper.parse_security_info(payload, board=board, board_payload=board_payload)
         if info is None:
             raise MoexNotFound(f"Бумага {secid} не найдена в MOEX")
         return info
@@ -122,7 +137,10 @@ class MoexClient:
     ) -> CurrentQuote | None:
         """Fetch the latest available price for a security."""
 
-        path = f"/engines/stock/markets/{market}/boards/{board}/securities/{secid}.json"
+        path = (
+            f"/engines/stock/markets/{market}/boards/{board}"
+            f"/securities/{quote(secid, safe='')}.json"
+        )
         payload = self._get(path)
         return mapper.parse_current_quote(
             payload,
@@ -142,7 +160,10 @@ class MoexClient:
     ) -> list[HistoryPoint]:
         """Fetch daily history, following MOEX pagination."""
 
-        path = f"/history/engines/stock/markets/{market}/boards/{board}/securities/{secid}.json"
+        path = (
+            f"/history/engines/stock/markets/{market}/boards/{board}"
+            f"/securities/{quote(secid, safe='')}.json"
+        )
         points: list[HistoryPoint] = []
         start = 0
         for _ in range(HISTORY_MAX_PAGES):
@@ -163,7 +184,7 @@ class MoexClient:
     def get_bondization(self, secid: str) -> Bondization:
         """Fetch coupon and amortization schedules for a bond."""
 
-        payload = self._get(f"/securities/{secid}/bondization.json")
+        payload = self._get(f"/securities/{quote(secid, safe='')}/bondization.json")
         return mapper.parse_bondization(payload)
 
     def _throttle(self) -> None:

@@ -24,11 +24,6 @@ from app.providers.moex.client import MoexClient
 from app.providers.moex.schemas import SecurityInfo, SecuritySearchResult
 from app.services import bondization_service, portfolio_service
 
-BOARD_SPECS: dict[str, tuple[str, AssetType]] = {
-    "TQBR": ("shares", AssetType.STOCK),
-    "TQCB": ("bonds", AssetType.BOND),
-}
-
 
 @dataclass(frozen=True, slots=True)
 class AssetCard:
@@ -201,13 +196,13 @@ def _find_asset(session: Session, secid: str, board: str) -> Asset | None:
 
 
 def _board_spec(board: str) -> tuple[str, AssetType]:
-    spec = BOARD_SPECS.get(board)
+    spec = mapper.BOARD_SPECS.get(board)
     if spec is None:
         raise AppError(
             ErrorCode.BAD_REQUEST,
             f"Площадка {board} не поддерживается",
             status_code=400,
-            details={"board": board, "supported": sorted(BOARD_SPECS)},
+            details={"board": board, "supported": sorted(mapper.BOARD_SPECS)},
         )
     return spec
 

@@ -674,15 +674,25 @@ GET /iss/securities.json?q={query}&iss.meta=off
 GET /iss/securities/{secid}.json?iss.meta=off
 ```
 
-Используемые поля:
+Текущий ответ ISS содержит таблицы `description` (пары `name`/`value`) и `boards`; таблицы `securities` в нём больше нет.
 
-- `SECNAME`, `SHORTNAME`, `ISIN`
-- `FACEVALUE`, `FACEUNIT`
-- `LOTSIZE`
-- `BOARDID`
-- `TYPE`
+Поля `description`:
 
-Для облигации `FACEVALUE` — номинал в RUB. Если пришел в другой валюте — отклонить (MVP только RUB).
+- `SECID`, `NAME`, `SHORTNAME`, `ISIN`, `TYPE`
+- `FACEVALUE` — текущий номинал, `INITIALFACEVALUE` — первоначальный
+- `FACEUNIT`
+
+Для первоначального номинала приоритет у `INITIALFACEVALUE`; `FACEVALUE` используется только как fallback, если `INITIALFACEVALUE` отсутствует. Для облигации номинал должен быть в RUB (`SUR`/`RUB`); другая валюта отклоняется (MVP только RUB).
+
+`LOTSIZE` в текущем формате отсутствует и берётся из board-endpoint:
+
+```http
+GET /iss/engines/stock/markets/{market}/boards/{board}/securities/{secid}.json?iss.meta=off
+```
+
+Если `description`/`boards` нет, поддерживается старый формат с таблицей `securities`: `SECNAME`, `SHORTNAME`, `ISIN`, `FACEVALUE`, `FACEUNIT`, `LOTSIZE`, `BOARDID`, `TYPE`.
+
+Поддерживаются только площадки `TQBR` (акции) и `TQCB` (облигации). ОФЗ на `TQOB` в MVP не входят.
 
 ### 7.3 Текущая цена
 
@@ -741,19 +751,20 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
   - `valueprc`
   - `recorddate`
 - `amortizations`:
-  - `amortizationdate`
+  - `amortdate` (живой ISS; fallback `amortizationdate`)
   - `value` / `value_rub`
   - `valueprc`
 
 Маппинг:
 
 - Купон: `amount_per_unit = value_rub` (RUB на одну облигацию), `pay_date = coupondate`, `record_date = recorddate`.
-- Амортизация: `amount_per_unit = value_rub`, `date = amortizationdate`.
+- Амортизация: `amount_per_unit = value_rub`, `date = amortdate`.
 
 Если поля различаются между бумагами, маппер должен использовать fallback:
 
 - `value_rub` → `value`;
-- `coupondate` → `coupon_date`.
+- `coupondate` → `coupon_date`;
+- `amortdate` → `amortizationdate`.
 
 ### 7.6 Ошибки и лимиты
 
