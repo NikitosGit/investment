@@ -11,7 +11,7 @@
 | Этап | Содержание | Статус | Ревью |
 |---|---|---|---|
 | 0 | Каркас, shell, тема, routing, proxy, API/error/formatting foundation | [x] | [x] |
-| 1 | Data layer + Dashboard | [ ] | [ ] |
+| 1 | Data layer + Dashboard | [x] | [x] |
 | 2 | Portfolio + asset search/add + asset detail + operations CRUD | [ ] | [ ] |
 | 3 | Income | [ ] | [ ] |
 | 4 | Settings/system | [ ] | [ ] |
@@ -602,24 +602,24 @@ frontend/src/app/shared/ui/**
 
 ---
 
-### [ ] Этап 1. Data layer + Dashboard
+### [x] Этап 1. Data layer + Dashboard
 
 **Цель:** дашборд показывает реальные данные seed: итоги, график, позиции, ближайшие купоны, partial/stale-состояния.
 
 **Deliverables**
 
-- [ ] Типы и сервисы: Dashboard, Positions (для портфеля), Portfolio, Health.
-- [ ] `DashboardPage`: заголовок, 5 карточек, period switcher, график, таблица позиций, ближайшие купоны.
-- [ ] Карточки: стоимость, вложено, выплаченные дивиденды, выплаченные купоны, ожидаемые купоны.
-- [ ] Period switch: `1M`, `3M`, `1Y`, `ALL`; запрос `GET /api/dashboard?period=...`.
-- [ ] Переключатель периода меняет только текущий вид; сохранённый default `dashboard_period` редактируется на экране настроек.
-- [ ] Первичная загрузка — `GET /api/dashboard` без `period`: backend применит сохранённый `dashboard_period`, активная кнопка берётся из `response.period`.
-- [ ] Chart.js: две линии (market_value, invested), даты по X, tooltip ru-RU, легенда.
-- [ ] Таблица позиций: тикер, тип, количество, средняя, текущая цена, стоимость, доля; ссылка на карточку. Использовать `dashboard.positions`, без отдельного запроса.
-- [ ] Ближайшие купоны: дата, тикер, сумма, количество; ссылка в доходы.
-- [ ] Partial warning при `is_partial=true`; stale badge по `is_stale`/`price_source`.
-- [ ] Empty state для пустого портфеля; error state с retry; skeleton.
-- [ ] Chart wrapper `ValueChartComponent` в `shared/ui`, чтобы изолировать Chart.js; импортировать `ChartModule` из `primeng/chart`, типы — из `chart.js`.
+- [x] Типы и сервисы: Dashboard, Positions (для портфеля), Portfolio, Health.
+- [x] `DashboardPage`: заголовок, 5 карточек, period switcher, график, таблица позиций, ближайшие купоны.
+- [x] Карточки: стоимость, вложено, выплаченные дивиденды, выплаченные купоны, ожидаемые купоны.
+- [x] Period switch: `1M`, `3M`, `1Y`, `ALL`; запрос `GET /api/dashboard?period=...`.
+- [x] Переключатель периода меняет только текущий вид; сохранённый default `dashboard_period` редактируется на экране настроек.
+- [x] Первичная загрузка — `GET /api/dashboard` без `period`: backend применит сохранённый `dashboard_period`, активная кнопка берётся из `response.period`.
+- [x] Chart.js: две линии (market_value, invested), даты по X, tooltip ru-RU, легенда.
+- [x] Таблица позиций: тикер, тип, количество, средняя, текущая цена, стоимость, доля; ссылка на карточку. Использовать `dashboard.positions`, без отдельного запроса.
+- [x] Ближайшие купоны: дата, тикер, сумма, количество; ссылка в доходы.
+- [x] Partial warning при `is_partial=true`; stale badge по `is_stale`/`price_source`.
+- [x] Empty state для пустого портфеля; error state с retry; skeleton.
+- [x] Chart wrapper `ValueChartComponent` в `shared/ui`, чтобы изолировать Chart.js; импортировать `ChartModule` из `primeng/chart`, типы — из `chart.js`.
 
 **Files/areas**
 
@@ -642,31 +642,31 @@ frontend/src/app/shared/ui/value-chart/**
 
 **Acceptance criteria**
 
-- [ ] С seed дашборд показывает `16242.00`, `15918.45`, `200.00`, `525.00`, `1575.00`.
-- [ ] Позиции: SBER 15 @110, ОФЗ 15 @95.123%, доли `0.2789`/`0.7211`.
-- [ ] Ближайшие купоны: 3 записи по `525.00`.
-- [ ] Переключение периода меняет `series` и не меняет `totals`.
-- [ ] При `is_partial=true` виден warning; при `is_stale=true` виден бейдж с датой.
-- [ ] Нет клиентского пересчёта итогов, долей, купонов.
-- [ ] Пустой портфель показывает EmptyState, ошибка — ErrorState с retry.
+- [x] С seed дашборд показывает `16242.00`, `15918.45`, `200.00`, `525.00`, `1575.00`.
+- [x] Позиции: SBER 15 @110, ОФЗ 15 @95.123%, доли `0.2789`/`0.7211`.
+- [x] Ближайшие купоны: 3 записи по `525.00`.
+- [x] Переключение периода меняет `series` и не меняет `totals`.
+- [x] При `is_partial=true` виден warning; при `is_stale=true` виден бейдж с датой.
+- [x] Нет клиентского пересчёта итогов, долей, купонов.
+- [x] Пустой портфель показывает EmptyState, ошибка — ErrorState с retry.
 
 **Tests**
 
-- [ ] Unit: `DashboardService` формирует корректный URL с period; первичный запрос идёт без `period`.
-- [ ] Unit: mapping `Dashboard` не теряет строковые деньги и `is_partial`.
-- [ ] Component: карточки рендерят значения; period switch вызывает сервис с нужным периодом.
-- [ ] Component: partial warning и stale badge.
-- [ ] Component: empty/error/loading states.
-- [ ] Chart: замокать `ValueChartComponent` или canvas context; не требовать реального canvas HTML в Karma/headless-браузере.
+- [x] Unit: `DashboardService` формирует корректный URL с period; первичный запрос идёт без `period`.
+- [x] Unit: mapping `Dashboard` не теряет строковые деньги и `is_partial`.
+- [x] Component: карточки рендерят значения; period switch вызывает сервис с нужным периодом.
+- [x] Component: partial warning и stale badge.
+- [x] Component: empty/error/loading states.
+- [x] Chart: замокать `ValueChartComponent` или canvas context; не требовать реального canvas HTML в Karma/headless-браузере.
 
 **Review checkpoint**
 
-- [ ] Ревью контракта: поля совпадают с OpenAPI.
-- [ ] Ревью расчётов: на клиенте нет арифметики денег.
-- [ ] Ревью графика: данные не агрегируются/не интерполируются; volume 181 точка.
-- [ ] Ревью состояний: loading/empty/error/partial/stale.
+- [x] Ревью контракта: поля совпадают с OpenAPI.
+- [x] Ревью расчётов: на клиенте нет арифметики денег.
+- [x] Ревью графика: данные не агрегируются/не интерполируются; series из API выводится точка-в-точку.
+- [x] Ревью состояний: loading/empty/error/partial/stale.
 
-**Review findings / status:** _не заполнено; заполняется после ревью._
+**Review findings / status:** **PASS после исправлений** — 2026-11-01, ревью по skill `code-review-and-quality`. Исправлено в ходе ревью: (R1) `DashboardResponse.period` приходит строкой, `as Period` убран; добавлен runtime guard `toPeriod()` и fallback на предыдущий период + тесты на неизвестный период; (R2) удалён мёртвый `trackPosition`; (R3) из таблицы убран англоязычный бейдж `RUB`/`PERCENT` — цена уже подписана `₽`/`%`; (R4) график больше не сглаживается (`tension: 0`), данные не интерполируются; (R5) исправлена высота `p-chart` (canvas заполняет 320 px, а не 147 px) и переполнение подписей X на 360 px (`autoSkipPadding`, без принудительного `maxTicksLimit`). Добавлен регрессионный тест на late response: ответ устаревшего периода не перезаписывает свежий. Проверки: **95 Karma-тестов** в Chrome headless (Edge через `CHROME_BIN`), `npm run build`, живая проверка seeded API (`16242.00`/`15918.45`/`200.00`/`525.00`/`1575.00`, series 183 точки, SBER/ОФЗ, 3 купона, `is_stale=true` для обеих позиций). Headless-проверка 1280 px и 360 px: горизонтального скролла страницы нет, `scrollWidth=viewport`; консоль без ошибок и NG0100. Mutation-проверка: отключение sequence guard и отключение partial warning роняют по одному тесту. Осознанно отложено до Stage 5: caption/aria-label таблиц, клавиатурный focus в диалогах, полный a11y-аудит; горизонтальный скролл широкой таблицы позиций на узких экранах — намеренный.
 
 ---
 
@@ -1129,6 +1129,7 @@ docs/FRONTEND_HANDOFF.md
 | 2026-10-30 | — | API сверен с OpenAPI и temp seeded-ответами | — |
 | 2026-10-30 | — | Стек скорректирован и верифицирован: Angular **20.3.34** (CLI/build **20.3.42**), PrimeNG **20.4.0** (MIT) + `@primeuix/themes` **2.0.0** (MIT, Aura), PrimeIcons 7.0.0, Chart.js 4.4.9, TypeScript 5.9.3, RxJS 7.8.2, Zone.js 0.15.1, builder `@angular/build:application`, Karma + Jasmine (`@angular/build:karma`), Node 24.22; `npm audit` — 0 vulnerabilities. Заменяет все прежние записи о стеке | — |
 | 2026-10-30 | 0 | Этап 0 завершён и прошёл независимое ревью (**PASS**): Angular 20.3.34 + PrimeNG 20.4.0 (MIT) shell, тема, routing, proxy, API/error/formatting foundation; 70 Karma-тестов, `npm run build`, `npm audit --omit=dev` — 0 vulnerabilities | — |
+| 2026-11-01 | 1 | Этап 1 завершён и прошёл ревью (**PASS после исправлений**): сервисы Dashboard/Positions/Portfolio/Settings, дашборд с 5 карточками, графиком, позициями и купонами; runtime guard периода, исправлены высота/подписи графика; 95 Karma-тестов, `npm run build`, живая проверка seeded API и 360/1280 px | — |
 
 ### 12.2. Результаты ревью
 
@@ -1137,7 +1138,7 @@ docs/FRONTEND_HANDOFF.md
 | Этап | Дата | Вердикт | Находки | Статус |
 |---|---|---|---|---|
 | 0 | 2026-10-30 | PASS | 0 Critical / 0 Required; R1–R5 исправлены; визуальные pixel-check и a11y-аудит отложены до Stage 5 | [x] |
-| 1 | — | — | — | [ ] |
+| 1 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R5 исправлены (guard периода, мёртвый код, англоязычный бейдж, интерполяция/высота/подписи графика); добавлены тесты late response и unknown period | [x] |
 | 2 | — | — | — | [ ] |
 | 3 | — | — | — | [ ] |
 | 4 | — | — | — | [ ] |

@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.value-chart__canvas {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+}
+
+.value-chart__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  color: var(--app-text-muted);
+  background: var(--app-surface-muted);
+  border: 1px dashed var(--app-border);
+  border-radius: var(--app-radius-sm);
+}
+
+.value-chart__canvas ::ng-deep .p-chart {
+  height: 100%;
+}
+
+:host ::ng-deep .value-chart__canvas canvas {
+  max-width: 100%;
+}

@@ -1,10 +1,201 @@
-<app-page-header
-  title="Дашборд"
-  subtitle="Сводка по портфелю: стоимость, вложенные средства и выплаты."
-/>
+<app-page-header title="Дашборд" [subtitle]="subtitle()" />
 
-<app-empty-state
-  icon="pi pi-chart-line"
-  title="Дашборд будет добавлен на следующем этапе"
-  message="Каркас приложения готов. Итоги, график и ближайшие купоны появятся после подключения данных."
-/>
+@if (initialLoading()) {
+  <app-loading-skeleton [cards]="5" [rows]="4" />
+} @else if (error() && !data()) {
+  <app-error-state [message]="errorMessage()" (retry)="retry()" />
+} @else if (data(); as dashboard) {
+  @if (isEmpty()) {
+    <app-empty-state
+      icon="pi pi-briefcase"
+      title="Портфель пуст"
+      message="Добавьте актив и первую операцию, чтобы увидеть итоги, динамику стоимости и ближайшие купоны."
+    >
+      <a pButton label="Перейти в портфель" icon="pi pi-arrow-right" iconPos="right" routerLink="/portfolio"></a>
+    </app-empty-state>
+  } @else {
+    <div class="dashboard">
+      <section class="dashboard__cards" aria-label="Итоги портфеля">
+        <app-stat-card
+          label="Стоимость"
+          [value]="dashboard.totals.market_value | money"
+          icon="pi pi-wallet"
+          severity="success"
+          [hint]="positionsHint()"
+        />
+        <app-stat-card
+          label="Вложено"
+          [value]="dashboard.totals.invested | money"
+          icon="pi pi-briefcase"
+          severity="info"
+          hint="Всего вложено в открытые позиции"
+        />
+        <app-stat-card
+          label="Дивиденды"
+          [value]="dashboard.totals.dividends_paid | money"
+          icon="pi pi-chart-bar"
+          hint="Выплачено за всё время"
+        />
+        <app-stat-card
+          label="Купоны"
+          [value]="dashboard.totals.coupons_paid | money"
+          icon="pi pi-percentage"
+          hint="Выплачено за всё время"
+        />
+        <app-stat-card
+          label="Ожидаемые купоны"
+          [value]="dashboard.totals.expected_coupons | money"
+          icon="pi pi-calendar-clock"
+          severity="warn"
+          hint="Будущие выплаты по текущим позициям"
+        />
+      </section>
+
+      <section class="dashboard__panel" aria-labelledby="dashboard-chart-title">
+        <header class="dashboard__panel-head">
+          <div>
+            <h2 id="dashboard-chart-title">Динамика стоимости</h2>
+            <p class="dashboard__hint">
+              Период: {{ periodLabel(selectedPeriod()) }} · {{ dashboard.currency }}
+            </p>
+          </div>
+
+          <app-period-switcher
+            [selected]="selectedPeriod()"
+            (change)="onPeriodChange($event)"
+          />
+        </header>
+
+        @if (dashboard.is_partial) {
+          <p-message severity="warn" styleClass="dashboard__warning">
+            Часть графика оценена по себестоимости: по некоторым активам нет исторических
+            котировок.
+          </p-message>
+        }
+
+        <div class="dashboard__chart" [class.is-loading]="loading()">
+          <app-value-chart [series]="chartSeries()" height="320px" />
+
+          @if (loading()) {
+            <div class="dashboard__chart-loading">
+              <p-progressSpinner strokeWidth="4" ariaLabel="Обновление графика" />
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="dashboard__panel" aria-labelledby="dashboard-positions-title">
+        <header class="dashboard__panel-head">
+          <div>
+            <h2 id="dashboard-positions-title">Позиции</h2>
+            <p class="dashboard__hint">Открытые позиции портфеля</p>
+          </div>
+
+          <a class="dashboard__link" routerLink="/portfolio">Весь портфель</a>
+        </header>
+
+        <p-table
+          [value]="dashboard.positions"
+          [scrollable]="true"
+          dataKey="asset.id"
+          styleClass="dashboard-table"
+          [tableStyle]="{ 'min-width': '960px' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col">Тикер / название</th>
+              <th scope="col">Тип</th>
+              <th scope="col" class="text-right">Количество</th>
+              <th scope="col" class="text-right">Средняя</th>
+              <th scope="col" class="text-right">Текущая цена</th>
+              <th scope="col" class="text-right">Стоимость</th>
+              <th scope="col" class="text-right">Доля</th>
+              <th scope="col">Источник цены</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-position>
+            <tr>
+              <td>
+                <a
+                  class="dashboard__asset-link"
+                  [routerLink]="['/assets', position.asset.id]"
+                  [attr.aria-label]="'Открыть карточку ' + position.asset.secid"
+                >
+                  <span class="dashboard__ticker">{{ position.asset.secid }}</span>
+                  <span class="dashboard__asset-name">{{ position.asset.name }}</span>
+                </a>
+              </td>
+              <td>{{ assetTypeLabel(position.asset.type) }}</td>
+              <td class="text-right mono">{{ position.quantity }}</td>
+              <td class="text-right mono">
+                {{ position.avg_price | money }}
+                @if (position.avg_price_percent) {
+                  <span class="dashboard__secondary">
+                    {{ position.avg_price_percent | price }} %
+                  </span>
+                }
+              </td>
+              <td class="text-right mono">
+                @if (position.current_price_type === 'PERCENT') {
+                  {{ position.current_price | price }} %
+                } @else {
+                  {{ position.current_price | money }}
+                }
+              </td>
+              <td class="text-right mono">{{ position.market_value | money }}</td>
+              <td class="text-right mono">{{ position.share | share }}</td>
+              <td>
+                <app-price-source-badge
+                  [source]="toPriceSource(position.price_source)"
+                  [isStale]="position.is_stale"
+                  [priceDate]="position.price_date"
+                />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </section>
+
+      <section class="dashboard__panel" aria-labelledby="dashboard-coupons-title">
+        <header class="dashboard__panel-head">
+          <div>
+            <h2 id="dashboard-coupons-title">Ближайшие купоны</h2>
+            <p class="dashboard__hint">Ожидаемые выплаты по открытым позициям</p>
+          </div>
+
+          <a class="dashboard__link" routerLink="/income">Все доходы</a>
+        </header>
+
+        @if (dashboard.upcoming_coupons.length === 0) {
+          <p class="dashboard__empty-row">Ближайших купонов нет.</p>
+        } @else {
+          <div class="dashboard__coupons-scroll">
+            <table class="dashboard-coupons">
+              <thead>
+                <tr>
+                  <th scope="col">Дата выплаты</th>
+                  <th scope="col">Тикер</th>
+                  <th scope="col" class="text-right">Количество</th>
+                  <th scope="col" class="text-right">Сумма</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (coupon of dashboard.upcoming_coupons; track coupon.id) {
+                  <tr>
+                    <td>{{ coupon.pay_date | date }}</td>
+                    <td>
+                      <a [routerLink]="['/assets', coupon.asset_id]">{{ coupon.asset_secid }}</a>
+                    </td>
+                    <td class="text-right mono">{{ coupon.quantity ?? '—' }}</td>
+                    <td class="text-right mono">{{ coupon.amount_total | money }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    </div>
+  }
+}

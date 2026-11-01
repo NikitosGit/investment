@@ -7,9 +7,11 @@ import { Router, provideRouter } from '@angular/router';
 import Aura from '@primeuix/themes/aura';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
+import { of } from 'rxjs';
 
-import type { HealthResponse } from './core/api/models';
+import type { DashboardResponse, HealthResponse } from './core/api/models';
 import { apiErrorInterceptor } from './core/interceptors/api-error.interceptor';
+import { DashboardService } from './core/services/dashboard.service';
 import { AppComponent } from './app.component';
 import { routes } from './app.routes';
 
@@ -21,10 +23,35 @@ const HEALTH: HealthResponse = {
   last_quote_refresh_at: null,
 };
 
+const DASHBOARD: DashboardResponse = {
+  as_of: '2026-10-30',
+  currency: 'RUB',
+  period: '1Y',
+  totals: {
+    market_value: '0.00',
+    invested: '0.00',
+    dividends_paid: '0.00',
+    coupons_paid: '0.00',
+    income_paid_total: '0.00',
+    expected_coupons: '0.00',
+    positions_count: 0,
+    assets_count: 0,
+  },
+  series: [],
+  positions: [],
+  upcoming_coupons: [],
+  is_partial: false,
+};
+
 describe('AppComponent', () => {
   let http: HttpTestingController;
 
   beforeEach(async () => {
+    const dashboard = jasmine.createSpyObj<DashboardService>('DashboardService', [
+      'getDashboard',
+    ]);
+    dashboard.getDashboard.and.returnValue(of(DASHBOARD));
+
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
@@ -35,6 +62,7 @@ describe('AppComponent', () => {
         providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: false } } }),
         MessageService,
         ConfirmationService,
+        { provide: DashboardService, useValue: dashboard },
       ],
     }).compileComponents();
 

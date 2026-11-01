@@ -72,6 +72,34 @@ export type QuotePeriod = '1M' | '3M' | '6M' | '1Y' | '3Y' | '5Y' | 'ALL';
 export type PriceSource = 'MOEX' | 'MANUAL' | 'COST';
 
 /**
+ * Narrow the loosely typed `position.price_source` string to a `PriceSource`.
+ *
+ * Unknown values return an empty string so badges can render a neutral fallback.
+ */
+export function toPriceSource(value: string | null | undefined): PriceSource | '' {
+  return value === 'MOEX' || value === 'MANUAL' || value === 'COST' ? value : '';
+}
+
+/**
+ * Narrow `DashboardResponse.period` (typed as `string` by the generated
+ * contract) to a supported dashboard period.
+ *
+ * Unknown values return `null`, so the UI keeps its previous selection instead
+ * of rendering a period the switcher cannot represent.
+ */
+export function toPeriod(value: string | null | undefined): Period | null {
+  switch (value) {
+    case '1M':
+    case '3M':
+    case '1Y':
+    case 'ALL':
+      return value;
+    default:
+      return null;
+  }
+}
+
+/**
  * Error envelope returned by the backend.
  *
  * It is not part of OpenAPI, so the shape is declared on the client.

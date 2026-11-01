@@ -1,0 +1,7 @@
+@if (series().length === 0) {
+  <div class="value-chart__empty" role="status">Нет данных для графика</div>
+} @else {
+  <div class="value-chart__canvas" [style.height]="height()">
+    <p-chart type="line" [data]="chartData()" [options]="chartOptions" />
+  </div>
+}
