@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
@@ -55,6 +57,8 @@ describe('ShellComponent routing', () => {
     await TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         provideNoopAnimations(),
         providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: false } } }),
         MessageService,

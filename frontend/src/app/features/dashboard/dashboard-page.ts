@@ -12,22 +12,14 @@ import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { TableModule } from 'primeng/table';
 import { finalize } from 'rxjs';
 
 import { mapHttpError } from '../../core/api/api-error';
 import type { ApiError } from '../../core/api/api-error';
-import type {
-  AssetType,
-  DashboardResponse,
-  DashboardSeriesPointOut,
-  Period,
-} from '../../core/api/models';
-import { toPeriod, toPriceSource } from '../../core/api/models';
+import type { DashboardResponse, DashboardSeriesPointOut, Period } from '../../core/api/models';
+import { toPeriod } from '../../core/api/models';
 import { DatePipe } from '../../core/formatting/date.pipe';
 import { MoneyPipe } from '../../core/formatting/money.pipe';
-import { PricePipe } from '../../core/formatting/price.pipe';
-import { SharePipe } from '../../core/formatting/share.pipe';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
@@ -35,7 +27,7 @@ import { ErrorStateComponent } from '../../shared/ui/error-state/error-state.com
 import { LoadingSkeletonComponent } from '../../shared/ui/loading-skeleton/loading-skeleton.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { PeriodSwitcherComponent } from '../../shared/ui/period-switcher/period-switcher.component';
-import { PriceSourceBadgeComponent } from '../../shared/ui/price-source-badge/price-source-badge.component';
+import { PositionsTableComponent } from '../../shared/ui/positions-table/positions-table.component';
 import { StatCardComponent } from '../../shared/ui/stat-card/stat-card.component';
 import { ValueChartComponent } from '../../shared/ui/value-chart/value-chart.component';
 
@@ -55,15 +47,12 @@ const PERIOD_LABELS: Record<Period, string> = {
     ButtonModule,
     MessageModule,
     ProgressSpinnerModule,
-    TableModule,
     DatePipe,
     MoneyPipe,
-    PricePipe,
-    SharePipe,
     PageHeaderComponent,
     StatCardComponent,
     PeriodSwitcherComponent,
-    PriceSourceBadgeComponent,
+    PositionsTableComponent,
     ValueChartComponent,
     EmptyStateComponent,
     ErrorStateComponent,
@@ -90,6 +79,15 @@ export class DashboardPage implements OnInit {
 
   readonly initialLoading = computed(() => this.loading() && this.data() === null);
   readonly isEmpty = computed(() => (this.data()?.positions.length ?? 0) === 0);
+  readonly hasAssets = computed(() => (this.data()?.totals.assets_count ?? 0) > 0);
+  readonly emptyTitle = computed(() =>
+    this.hasAssets() ? 'Нет открытых позиций' : 'Портфель пуст',
+  );
+  readonly emptyMessage = computed(() =>
+    this.hasAssets()
+      ? 'Активы добавлены, но операций пока нет. Откройте портфель и внесите первую покупку.'
+      : 'Добавьте актив и первую операцию, чтобы увидеть итоги, динамику стоимости и ближайшие купоны.',
+  );
   readonly errorMessage = computed(() => this.error()?.message ?? '');
 
   readonly subtitle = computed(() => {
@@ -132,12 +130,6 @@ export class DashboardPage implements OnInit {
   periodLabel(period: Period): string {
     return PERIOD_LABELS[period];
   }
-
-  assetTypeLabel(type: AssetType): string {
-    return type === 'BOND' ? 'Облигация' : 'Акция';
-  }
-
-  readonly toPriceSource = toPriceSource;
 
   private load(period?: Period): void {
     const sequence = ++this.requestSequence;

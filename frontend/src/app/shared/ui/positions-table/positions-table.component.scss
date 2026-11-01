@@ -1,0 +1,36 @@
+:host {
+  display: block;
+}
+
+.positions-table__asset-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: inherit;
+}
+
+.positions-table__asset-link:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+.positions-table__ticker {
+  font-weight: 700;
+  color: var(--app-primary);
+}
+
+.positions-table__asset-name {
+  color: var(--app-text-muted);
+  font-size: 0.8125rem;
+}
+
+.positions-table__secondary {
+  display: block;
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+}
+
+.positions-table ::ng-deep .p-datatable-header-cell,
+.positions-table ::ng-deep .p-datatable-tbody > tr > td {
+  white-space: nowrap;
+}

@@ -1,7 +1,408 @@
-<app-page-header title="Карточка актива" [subtitle]="subtitle()" />
+<app-page-header title="Карточка актива" [subtitle]="subtitle()">
+  <p-button
+    label="Добавить операцию"
+    icon="pi pi-plus"
+    [disabled]="deleting()"
+    (onClick)="openCreateOperation()"
+  />
+  <p-button
+    label="Обновить данные"
+    icon="pi pi-refresh"
+    severity="secondary"
+    [outlined]="true"
+    [loading]="refreshing()"
+    [disabled]="refreshing() || deleting()"
+    (onClick)="refreshAsset()"
+  />
+  <p-button
+    label="Удалить"
+    icon="pi pi-trash"
+    severity="danger"
+    [text]="true"
+    [loading]="deleting()"
+    [disabled]="deleting() || refreshing()"
+    (onClick)="confirmDeleteAsset()"
+  />
+</app-page-header>
 
-<app-empty-state
-  icon="pi pi-chart-bar"
-  title="Карточка актива будет добавлена на следующем этапе"
-  message="Позиция, операции, доходы и история котировок появятся после подключения данных."
-/>
+@if (initialLoading()) {
+  <app-loading-skeleton [cards]="4" [rows]="6" />
+} @else if (error(); as apiError) {
+  <app-error-state [message]="apiError.message" (retry)="retry()" />
+} @else if (asset(); as asset) {
+  <div class="asset-detail">
+    <section class="asset-detail__panel" aria-labelledby="asset-overview-title">
+      <header class="asset-detail__panel-head">
+        <div>
+          <h2 id="asset-overview-title">О бумаге</h2>
+          <p class="asset-detail__hint">Метаданные актива и расписание амортизации.</p>
+        </div>
+        @if (!asset.is_active) {
+          <p-tag value="Неактивен" severity="warn" [rounded]="true" />
+        }
+      </header>
+
+      <dl class="asset-detail__facts">
+        <div>
+          <dt>Тип</dt>
+          <dd>
+            <p-tag [value]="assetTypeLabel(asset.type)" severity="secondary" [rounded]="true" />
+          </dd>
+        </div>
+        <div>
+          <dt>Тикер</dt>
+          <dd class="mono">{{ asset.secid }}</dd>
+        </div>
+        <div>
+          <dt>Название</dt>
+          <dd>{{ asset.name }}</dd>
+        </div>
+        <div>
+          <dt>ISIN</dt>
+          <dd class="mono">{{ asset.isin ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>Режим торгов</dt>
+          <dd class="mono">{{ asset.board }}</dd>
+        </div>
+        <div>
+          <dt>Валюта</dt>
+          <dd>{{ asset.currency }}</dd>
+        </div>
+        <div>
+          <dt>Размер лота</dt>
+          <dd class="mono">{{ asset.lot_size }}</dd>
+        </div>
+        @if (isBond()) {
+          <div>
+            <dt>Текущий номинал</dt>
+            <dd class="mono">{{ asset.current_face_value | money }}</dd>
+          </div>
+          <div>
+            <dt>Первоначальный номинал</dt>
+            <dd class="mono">{{ asset.initial_face_value | money }}</dd>
+          </div>
+        }
+      </dl>
+
+      @if ((asset.amortizations?.length ?? 0) > 0) {
+        <div class="asset-detail__amortizations">
+          <h3>Амортизация</h3>
+          <ul>
+            @for (item of asset.amortizations ?? []; track item.id) {
+              <li>
+                <span>{{ item.amortization_date | date }}</span>
+                <span class="mono">{{ item.amount_per_unit | money }}</span>
+                <span class="text-muted">{{ dataSourceLabel(item.source) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </section>
+
+    <section class="asset-detail__panel" aria-labelledby="asset-position-title">
+      <header class="asset-detail__panel-head">
+        <div>
+          <h2 id="asset-position-title">Позиция</h2>
+          <p class="asset-detail__hint">Текущее количество, средняя и рыночная стоимость.</p>
+        </div>
+        @if (position(); as positionData) {
+          <app-price-source-badge
+            [source]="toPriceSource(positionData.price_source)"
+            [isStale]="positionData.is_stale"
+            [priceDate]="positionData.price_date"
+          />
+        }
+      </header>
+
+      @if (position(); as positionData) {
+        <div class="asset-detail__stats">
+          <app-stat-card
+            label="Количество"
+            [value]="positionData.quantity.toString()"
+            icon="pi pi-box"
+            hint="шт. на текущую дату"
+          />
+          <app-stat-card
+            label="Средняя цена"
+            [value]="positionData.avg_price | money"
+            icon="pi pi-chart-line"
+            [hint]="avgPercentLabel(positionData)"
+          />
+          <app-stat-card
+            label="Текущая цена"
+            [value]="currentPriceLabel(positionData)"
+            icon="pi pi-tag"
+            severity="info"
+          />
+          <app-stat-card
+            label="Стоимость"
+            [value]="positionData.market_value | money"
+            icon="pi pi-wallet"
+            severity="success"
+          />
+          <app-stat-card
+            label="Доля"
+            [value]="positionData.share | share"
+            icon="pi pi-chart-pie"
+          />
+        </div>
+      } @else {
+        <div class="asset-detail__empty-row">
+          <p>Нет открытой позиции: операции ещё не созданы или весь объём продан.</p>
+          <p-button
+            label="Добавить операцию"
+            icon="pi pi-plus"
+            [text]="true"
+            (onClick)="openCreateOperation()"
+          />
+        </div>
+      }
+    </section>
+
+    <section class="asset-detail__panel" aria-labelledby="asset-operations-title">
+      <header class="asset-detail__panel-head">
+        <div>
+          <h2 id="asset-operations-title">Операции</h2>
+          <p class="asset-detail__hint">
+            История покупок и продаж. Цена в рублях рассчитана backend.
+          </p>
+        </div>
+        <p-button
+          label="Добавить операцию"
+          icon="pi pi-plus"
+          severity="secondary"
+          [outlined]="true"
+          [disabled]="deleting()"
+          (onClick)="openCreateOperation()"
+        />
+      </header>
+
+      @if (operations().length === 0) {
+        <div class="asset-detail__empty-row">
+          <p>Операций пока нет.</p>
+          <p-button
+            label="Создать первую операцию"
+            icon="pi pi-plus"
+            [text]="true"
+            (onClick)="openCreateOperation()"
+          />
+        </div>
+      } @else {
+        <p-table
+          [value]="operations()"
+          dataKey="id"
+          [scrollable]="true"
+          styleClass="asset-detail-table"
+          [tableStyle]="{ 'min-width': '820px' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col">Дата</th>
+              <th scope="col">Тип</th>
+              <th scope="col" class="text-right">Количество</th>
+              <th scope="col" class="text-right">Цена ввода</th>
+              <th scope="col" class="text-right">Цена, ₽</th>
+              <th scope="col">Комментарий</th>
+              <th scope="col" class="text-right">Действия</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-operation>
+            <tr>
+              <td>{{ operation.trade_date | date }}</td>
+              <td>
+                <p-tag
+                  [value]="operationTypeLabel(operation.type)"
+                  [severity]="operation.type === 'BUY' ? 'success' : 'warn'"
+                  [rounded]="true"
+                />
+              </td>
+              <td class="text-right mono">{{ operation.quantity }}</td>
+              <td class="text-right mono">
+                @if (operation.input_price_type === 'PERCENT') {
+                  {{ operation.input_price | price }} %
+                } @else {
+                  {{ operation.input_price | price }} ₽
+                }
+              </td>
+              <td class="text-right mono">{{ operation.price_rub | price }} ₽</td>
+              <td class="asset-detail__note">{{ operation.note ?? '—' }}</td>
+              <td class="text-right asset-detail__actions">
+                <p-button
+                  icon="pi pi-pencil"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  [ariaLabel]="'Изменить операцию от ' + operation.trade_date"
+                  [attr.title]="'Изменить операцию'"
+                  (onClick)="openEditOperation(operation)"
+                />
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  [rounded]="true"
+                  [ariaLabel]="'Удалить операцию от ' + operation.trade_date"
+                  [attr.title]="'Удалить операцию'"
+                  (onClick)="deleteOperation(operation)"
+                />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </section>
+
+    <section class="asset-detail__panel" aria-labelledby="asset-income-title">
+      <header class="asset-detail__panel-head">
+        <div>
+          <h2 id="asset-income-title">Доходы</h2>
+          <p class="asset-detail__hint">Выплаты и ожидаемые купоны по этому активу.</p>
+        </div>
+        <a class="asset-detail__link" routerLink="/income">Все доходы</a>
+      </header>
+
+      <div class="asset-detail__income">
+        <div class="asset-detail__income-group">
+          <h3>Выплаченные</h3>
+          @if (paidIncomes().length === 0) {
+            <p class="asset-detail__muted">Выплаченных доходов нет.</p>
+          } @else {
+            <div class="asset-detail__mini-scroll">
+              <table class="asset-detail__mini-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Тип</th>
+                    <th scope="col" class="text-right">Сумма</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (income of paidIncomes(); track income.id) {
+                    <tr>
+                      <td>{{ income.pay_date | date }}</td>
+                      <td>{{ incomeKindLabel(income.kind) }}</td>
+                      <td class="text-right mono">{{ income.amount_total | money }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
+        <div class="asset-detail__income-group">
+          <h3>Ожидаемые купоны</h3>
+          @if (expectedIncomes().length === 0) {
+            <p class="asset-detail__muted">Ожидаемых купонов нет.</p>
+          } @else {
+            <div class="asset-detail__mini-scroll">
+              <table class="asset-detail__mini-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Тип</th>
+                    <th scope="col" class="text-right">Сумма</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (income of expectedIncomes(); track income.id) {
+                    <tr>
+                      <td>
+                        {{ income.pay_date | date }}
+                        @if (income.is_overdue) {
+                          <p-tag value="Просрочен" severity="warn" [rounded]="true" />
+                        }
+                      </td>
+                      <td>{{ incomeKindLabel(income.kind) }}</td>
+                      <td class="text-right mono">{{ income.amount_total | money }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="asset-detail__panel" aria-labelledby="asset-quotes-title">
+      <header class="asset-detail__panel-head">
+        <div>
+          <h2 id="asset-quotes-title">История цен</h2>
+          <p class="asset-detail__hint">Кэшированные котировки; цены не пересчитываются на клиенте.</p>
+        </div>
+        <p-select
+          [options]="quotePeriodOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="quotePeriod()"
+          (ngModelChange)="onQuotePeriodChange($event)"
+          ariaLabel="Период истории котировок"
+        />
+      </header>
+
+      @if (quotesError(); as message) {
+        <div class="asset-detail__empty-row">
+          <p>{{ message }}</p>
+          <p-button
+            label="Повторить"
+            icon="pi pi-refresh"
+            severity="secondary"
+            [text]="true"
+            (onClick)="retryQuotes()"
+          />
+        </div>
+      } @else if (quotesLoading() && quotes().length === 0) {
+        <div class="asset-detail__loading-row">
+          <p-progressSpinner strokeWidth="4" ariaLabel="Загрузка истории цен" />
+        </div>
+      } @else if (quotes().length === 0) {
+        <p class="asset-detail__muted">Котировок за выбранный период нет.</p>
+      } @else {
+        <p-table
+          [value]="quotes()"
+          dataKey="id"
+          [scrollable]="true"
+          scrollHeight="320px"
+          styleClass="asset-detail-table"
+          [tableStyle]="{ 'min-width': '560px' }"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col">Дата</th>
+              <th scope="col" class="text-right">Цена</th>
+              <th scope="col">Тип цены</th>
+              <th scope="col">Источник</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-quote>
+            <tr>
+              <td>{{ quote.quote_date | date }}</td>
+              <td class="text-right mono">
+                @if (quote.price_type === 'PERCENT') {
+                  {{ quote.price | price }} %
+                } @else {
+                  {{ quote.price | price }} ₽
+                }
+              </td>
+              <td>{{ quote.price_type === 'PERCENT' ? '% от номинала' : 'Рубли' }}</td>
+              <td>{{ dataSourceLabel(quote.source) }}</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </section>
+  </div>
+
+  <app-operation-dialog
+    [visible]="operationDialogVisible()"
+    (visibleChange)="operationDialogVisible.set($event)"
+    [asset]="asset"
+    [operation]="editingOperation()"
+    (saved)="onOperationSaved()"
+  />
+}

@@ -8,8 +8,8 @@
   @if (isEmpty()) {
     <app-empty-state
       icon="pi pi-briefcase"
-      title="Портфель пуст"
-      message="Добавьте актив и первую операцию, чтобы увидеть итоги, динамику стоимости и ближайшие купоны."
+      [title]="emptyTitle()"
+      [message]="emptyMessage()"
     >
       <a pButton label="Перейти в портфель" icon="pi pi-arrow-right" iconPos="right" routerLink="/portfolio"></a>
     </app-empty-state>
@@ -94,67 +94,7 @@
           <a class="dashboard__link" routerLink="/portfolio">Весь портфель</a>
         </header>
 
-        <p-table
-          [value]="dashboard.positions"
-          [scrollable]="true"
-          dataKey="asset.id"
-          styleClass="dashboard-table"
-          [tableStyle]="{ 'min-width': '960px' }"
-        >
-          <ng-template pTemplate="header">
-            <tr>
-              <th scope="col">Тикер / название</th>
-              <th scope="col">Тип</th>
-              <th scope="col" class="text-right">Количество</th>
-              <th scope="col" class="text-right">Средняя</th>
-              <th scope="col" class="text-right">Текущая цена</th>
-              <th scope="col" class="text-right">Стоимость</th>
-              <th scope="col" class="text-right">Доля</th>
-              <th scope="col">Источник цены</th>
-            </tr>
-          </ng-template>
-
-          <ng-template pTemplate="body" let-position>
-            <tr>
-              <td>
-                <a
-                  class="dashboard__asset-link"
-                  [routerLink]="['/assets', position.asset.id]"
-                  [attr.aria-label]="'Открыть карточку ' + position.asset.secid"
-                >
-                  <span class="dashboard__ticker">{{ position.asset.secid }}</span>
-                  <span class="dashboard__asset-name">{{ position.asset.name }}</span>
-                </a>
-              </td>
-              <td>{{ assetTypeLabel(position.asset.type) }}</td>
-              <td class="text-right mono">{{ position.quantity }}</td>
-              <td class="text-right mono">
-                {{ position.avg_price | money }}
-                @if (position.avg_price_percent) {
-                  <span class="dashboard__secondary">
-                    {{ position.avg_price_percent | price }} %
-                  </span>
-                }
-              </td>
-              <td class="text-right mono">
-                @if (position.current_price_type === 'PERCENT') {
-                  {{ position.current_price | price }} %
-                } @else {
-                  {{ position.current_price | money }}
-                }
-              </td>
-              <td class="text-right mono">{{ position.market_value | money }}</td>
-              <td class="text-right mono">{{ position.share | share }}</td>
-              <td>
-                <app-price-source-badge
-                  [source]="toPriceSource(position.price_source)"
-                  [isStale]="position.is_stale"
-                  [priceDate]="position.price_date"
-                />
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
+        <app-positions-table [positions]="dashboard.positions" />
       </section>
 
       <section class="dashboard__panel" aria-labelledby="dashboard-coupons-title">

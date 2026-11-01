@@ -72,34 +72,6 @@
   white-space: nowrap;
 }
 
-.dashboard__asset-link {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: inherit;
-}
-
-.dashboard__asset-link:hover {
-  color: inherit;
-  text-decoration: none;
-}
-
-.dashboard__ticker {
-  font-weight: 700;
-  color: var(--app-primary);
-}
-
-.dashboard__asset-name {
-  color: var(--app-text-muted);
-  font-size: 0.8125rem;
-}
-
-.dashboard__secondary {
-  display: block;
-  color: var(--app-text-muted);
-  font-size: 0.75rem;
-}
-
 .dashboard__empty-row {
   margin: 0;
   padding: var(--app-space-4);
@@ -136,14 +108,6 @@
 
 .dashboard-coupons tbody tr:last-child td {
   border-bottom: 0;
-}
-
-.dashboard-table ::ng-deep .p-datatable-header-cell {
-  white-space: nowrap;
-}
-
-.dashboard-table ::ng-deep .p-datatable-tbody > tr > td {
-  white-space: nowrap;
 }
 
 @media (max-width: 720px) {

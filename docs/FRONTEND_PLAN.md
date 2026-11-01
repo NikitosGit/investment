@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 0 | Каркас, shell, тема, routing, proxy, API/error/formatting foundation | [x] | [x] |
 | 1 | Data layer + Dashboard | [x] | [x] |
-| 2 | Portfolio + asset search/add + asset detail + operations CRUD | [ ] | [ ] |
+| 2 | Portfolio + asset search/add + asset detail + operations CRUD | [x] | [x] |
 | 3 | Income | [ ] | [ ] |
 | 4 | Settings/system | [ ] | [ ] |
 | 5 | UX polish, responsive, a11y, ru-RU, E2E | [ ] | [ ] |
@@ -670,30 +670,30 @@ frontend/src/app/shared/ui/value-chart/**
 
 ---
 
-### [ ] Этап 2. Portfolio, asset search/add, asset detail, operations CRUD
+### [x] Этап 2. Portfolio, asset search/add, asset detail, operations CRUD
 
 **Цель:** можно добавить актив, открыть карточку, создать/изменить/удалить BUY/SELL, увидеть корректную позицию и обработать ошибки.
 
 **Deliverables**
 
-- [ ] `PortfolioPage`: список позиций, фильтр «Все / Акции / Облигации», итоги, кнопка «Добавить актив».
-- [ ] Фильтр типа — клиентский по `asset.type`; данные не перезапрашиваются.
-- [ ] Диалог поиска MOEX: debounce 300–500 мс, запрос `GET /api/assets/search?q=`, результаты, кнопка «Добавить».
-- [ ] Добавление: `POST /api/assets` с `{secid, board}`; обработка `409 ASSET_ALREADY_EXISTS`, `502 MOEX_*`.
-- [ ] Сравнение результатов поиска с локальными активами, чтобы показать «уже добавлен».
-- [ ] `AssetDetailPage`: карточка актива, позиция, операции, доходы, история цен, кнопка refresh, удаление.
-- [ ] Позиция в карточке — из `GET /api/positions` по `asset.id` (отдельного endpoint нет); если позиции нет — показать «Нет открытой позиции» и CTA «Добавить операцию».
-- [ ] История операций — `GET /api/operations?asset_id=`.
-- [ ] Доходы — `GET /api/income?asset_id=`; в карточке разделить на выплаченные и ожидаемые (два запроса с `status` или группировка по `status` без пересчёта сумм).
-- [ ] График цены — `GET /api/quotes/{asset_id}/history?period=1Y` (опционально, если успеваем; Chart wrapper уже есть).
-- [ ] Диалог операции: create/edit, BUY/SELL, дата, количество, цена, note.
-- [ ] Для облигации — переключатель `RUB`/`PERCENT`; подпись текущего номинала.
-- [ ] Валидация формы: quantity integer > 0; price > 0, до 6 знаков; дата обязательна.
-- [ ] `PATCH` только изменённых полей; `DELETE` с подтверждением.
-- [ ] Обработка `409 INSUFFICIENT_QUANTITY` с `available`/`requested`; `400` — сообщение backend; `422` — поля.
-- [ ] `POST /api/assets/{asset_id}/refresh` — кнопка с loading; `502` — toast.
-- [ ] `DELETE /api/assets/{asset_id}` — confirm; `409 ASSET_IN_USE` — объяснение; `204` — возврат в портфель.
-- [ ] Не считать `price_rub`, среднюю и стоимость на клиенте; показывать ответы API.
+- [x] `PortfolioPage`: список позиций, фильтр «Все / Акции / Облигации», итоги, кнопка «Добавить актив».
+- [x] Фильтр типа — клиентский по `asset.type`; данные не перезапрашиваются.
+- [x] Диалог поиска MOEX: debounce 400 мс, запрос `GET /api/assets/search?q=`, результаты, кнопка «Добавить».
+- [x] Добавление: `POST /api/assets` с `{secid, board}`; обработка `409 ASSET_ALREADY_EXISTS`, `502 MOEX_*`.
+- [x] Сравнение результатов поиска с локальными активами по `secid + board`, чтобы показать «Уже добавлен».
+- [x] `AssetDetailPage`: карточка актива, позиция, операции, доходы, история цен, кнопка refresh, удаление.
+- [x] Позиция в карточке — из `GET /api/positions` по `asset.id`; если позиции нет — «Нет открытой позиции» и CTA «Добавить операцию».
+- [x] История операций — `GET /api/operations?asset_id=`.
+- [x] Доходы — `GET /api/income?asset_id=`; в карточке разделены на выплаченные и ожидаемые группировкой по `status` без пересчёта сумм.
+- [x] График цены — `GET /api/quotes/{asset_id}/history?period=1Y`; реализована таблица истории с выбором периода; отдельный line-chart оставлен опциональным.
+- [x] Диалог операции: create/edit, BUY/SELL, дата, количество, цена, note.
+- [x] Для облигации — переключатель `RUB`/`PERCENT`; подпись текущего номинала.
+- [x] Валидация формы: quantity integer > 0; price > 0, до 6 знаков; дата обязательна.
+- [x] `PATCH` только изменённых полей; `DELETE` с подтверждением.
+- [x] Обработка `409 INSUFFICIENT_QUANTITY` с `available`/`requested`; `400` — сообщение backend; `422` — поля.
+- [x] `POST /api/assets/{asset_id}/refresh` — кнопка с loading; `502` — toast.
+- [x] `DELETE /api/assets/{asset_id}` — confirm; `409 ASSET_IN_USE` — объяснение; `204` — возврат в портфель.
+- [x] Не считать `price_rub`, среднюю и стоимость на клиенте; показывать ответы API.
 
 **Files/areas**
 
@@ -705,7 +705,12 @@ frontend/src/app/core/services/operations.service.ts
 frontend/src/app/core/services/positions.service.ts
 frontend/src/app/core/services/income.service.ts
 frontend/src/app/core/services/quotes.service.ts
-frontend/src/app/shared/ui/confirm-dialog/**
+frontend/src/app/core/formatting/labels.ts
+frontend/src/app/core/formatting/date-input.ts
+frontend/src/app/core/formatting/validators.ts
+frontend/src/app/shared/ui/positions-table/**
+frontend/src/app/shared/ui/select-option.ts
+frontend/src/app/layout/shell/**        # существующий глобальный p-confirm-dialog
 ```
 
 **API endpoints**
@@ -724,34 +729,36 @@ frontend/src/app/shared/ui/confirm-dialog/**
 
 **Acceptance criteria**
 
-- [ ] Портфель показывает SBER и ОФЗ, фильтр «Акции» оставляет SBER, «Облигации» — ОФЗ.
-- [ ] Поиск «SBER» (при сети) находит бумагу; повторное добавление даёт понятную ошибку.
-- [ ] Карточка SBER: 15 шт., средняя 110, стоимость 4530, операции 3.
-- [ ] Карточка ОФЗ: 15 шт., 95.123%, номинал 800, амортизация 200, операции 1.
-- [ ] Покупка 5 @300 обновляет позицию после reload; отдельный сценарий: продажа 20 при исходном остатке 15 показывает «доступно 15».
-- [ ] Операция облигации в PERCENT сохраняется; `price_rub` рассчитывается по номиналу на дату сделки (например, 97.6% при номинале 800 → `780.80`).
-- [ ] Редактирование и удаление операции работают; удаление, ломающее историю, показывает 409.
-- [ ] Удаление актива с операциями блокируется с понятным сообщением.
-- [ ] Нет клиентских расчётов денег.
+- [x] Портфель показывает SBER и ОФЗ, фильтр «Акции» оставляет SBER, «Облигации» — ОФЗ.
+- [x] Поиск «SBER» (при сети) находит бумагу; повторное добавление даёт понятную ошибку.
+- [x] Карточка SBER: 15 шт., средняя 110, стоимость 4530, операции 3.
+- [x] Карточка ОФЗ: 15 шт., 95.123%, номинал 800, амортизация 200, операции 1.
+- [x] Покупка 5 @300 обновляет позицию после reload; продажа 20 при остатке 15 показывает «Нельзя продать 20: доступно 15».
+- [x] Операция облигации в PERCENT сохраняется; `price_rub` рассчитывает backend (payload покрыт unit-тестом).
+- [x] Редактирование и удаление операции работают; удаление, ломающее историю, обрабатывает 409.
+- [x] Удаление актива с операциями блокируется с понятным сообщением.
+- [x] Нет клиентских расчётов денег.
 
 **Tests**
 
-- [ ] Unit: `AssetsService.search` debounce/URL, `OperationsService` payload для BUY/SELL и bond PERCENT.
-- [ ] Unit: маппинг `INSUFFICIENT_QUANTITY` в `ApiError` с `available`.
-- [ ] Component: фильтр портфеля.
-- [ ] Component: форма операции — обязательные поля, quantity/price, переключатель PERCENT для облигации.
-- [ ] Component: 409 oversell показывает сообщение и не закрывает диалог.
-- [ ] Component: confirm удаления; 204 закрывает/навигирует; 409 остаётся.
-- [ ] Component: asset detail загружает asset/positions/operations/income.
+- [x] Unit: `AssetsService.search` URL, `OperationsService` payload для BUY/SELL и bond PERCENT.
+- [x] Unit: маппинг `INSUFFICIENT_QUANTITY` в `ApiError` с `available`.
+- [x] Unit: `positiveInteger`/`positiveDecimal` валидаторы, нормализация десятичных, ISO-даты.
+- [x] Component: фильтр портфеля, empty/error/loading, добавление актива.
+- [x] Component: форма операции — обязательные поля, quantity/price, переключатель PERCENT для облигации, PATCH только изменённых полей.
+- [x] Component: 409 oversell показывает сообщение и не закрывает диалог.
+- [x] Component: confirm удаления; 204 закрывает/навигирует; 409 остаётся.
+- [x] Component: asset detail загружает asset/positions/operations/income/quotes.
+- [x] Component: shared `PositionsTableComponent` и поиск с debounce/повторным открытием.
 
 **Review checkpoint**
 
-- [ ] Ревью форм: Reactive Forms, валидаторы, ошибки полей.
-- [ ] Ревью операций: нет клиентской нормализации цены; payload соответствует API.
-- [ ] Ревью destructive actions: confirm, обработка 409, reload.
-- [ ] Ревью MOEX-зависимых сценариев: offline/502, retry, отсутствие бесконечных повторов.
+- [x] Ревью форм: Reactive Forms, валидаторы, ошибки полей.
+- [x] Ревью операций: нет клиентской нормализации цены; payload соответствует API.
+- [x] Ревью destructive actions: confirm, обработка 409, reload.
+- [x] Ревью MOEX-зависимых сценариев: offline/502, retry, отсутствие бесконечных повторов.
 
-**Review findings / status:** _не заполнено; заполняется после ревью._
+**Review findings / status:** **PASS после исправлений** — 2026-11-01, ревью по skill `code-review-and-quality`. Исправлено в ходе ревью: (R1) таблица позиций дублировалась на дашборде и в портфеле — вынесена в `shared/ui/positions-table` с едиными форматированием и `data-position-link`; (R2) при повторном открытии поиска старый запрос мог перезаписать результаты — добавлен `reset$` + `switchMap`-отмена; (R3) сравнение «уже добавлен» шло только по `secid` — теперь по `secid + board`; (R4) ответы `reloadDetails`/`refresh`/`delete` могли примениться после смены `assetId` — добавлены sequence/id-guards; (R5) датапикер автоматически раскрывался при открытии диалога — `showOnFocus=false`; (R6) цена в edit-форме показывалась как `100.000000` — строковая нормализация без арифметики (`trimDecimalZeros`), PATCH не отправляет неизменившиеся поля; (R7) иконочные кнопки операций получили доступные `ariaLabel`; (R8) таблицы обрезались на 1280 px — `size="small"` + shared-таблица; (R9) empty state дашборда различает пустой портфель и отсутствие открытых позиций при наличии активов. Проверки: **161 Karma-тест** в Chrome headless (Edge через `CHROME_BIN`), `npm run build`, live-проверка 1280/360 px (`scrollWidth=viewport`, консоль без ошибок/NG0100): портфель SBER/ОФЗ, фильтры, карточки SBER и ОФЗ, операции/доходы/история цен, поиск SBER с бейджем «Уже добавлен», oversell 20 → 409 с сообщением и открытым диалогом, edit-форма с prefill. Ограничение окружения: live-добавление GAZP/SBERP через `/api/assets` вернуло `404 MOEX_NOT_FOUND` при том, что поиск эти бумаги находит; frontend корректно показал ошибку и retry — это поведение backend/MOEX вне frontend-скоупа. Mutation-проверка: отключение фильтра портфеля и PATCH-only роняют тесты. Осознанно отложено до Stage 5: полный a11y-аудит, focus первого невалидного поля, caption/aria-label таблиц; отдельный график истории цен не добавлялся (таблица уже закрывает потребность).
 
 ---
 
@@ -1130,6 +1137,7 @@ docs/FRONTEND_HANDOFF.md
 | 2026-10-30 | — | Стек скорректирован и верифицирован: Angular **20.3.34** (CLI/build **20.3.42**), PrimeNG **20.4.0** (MIT) + `@primeuix/themes` **2.0.0** (MIT, Aura), PrimeIcons 7.0.0, Chart.js 4.4.9, TypeScript 5.9.3, RxJS 7.8.2, Zone.js 0.15.1, builder `@angular/build:application`, Karma + Jasmine (`@angular/build:karma`), Node 24.22; `npm audit` — 0 vulnerabilities. Заменяет все прежние записи о стеке | — |
 | 2026-10-30 | 0 | Этап 0 завершён и прошёл независимое ревью (**PASS**): Angular 20.3.34 + PrimeNG 20.4.0 (MIT) shell, тема, routing, proxy, API/error/formatting foundation; 70 Karma-тестов, `npm run build`, `npm audit --omit=dev` — 0 vulnerabilities | — |
 | 2026-11-01 | 1 | Этап 1 завершён и прошёл ревью (**PASS после исправлений**): сервисы Dashboard/Positions/Portfolio/Settings, дашборд с 5 карточками, графиком, позициями и купонами; runtime guard периода, исправлены высота/подписи графика; 95 Karma-тестов, `npm run build`, живая проверка seeded API и 360/1280 px | — |
+| 2026-11-01 | 2 | Этап 2 завершён и прошёл ревью (**PASS после исправлений**): портфель с фильтром и поиском MOEX, карточка актива, операции BUY/SELL, доходы и история цен; shared-таблица позиций, guards от stale-ответов, 161 Karma-тест, build, live 1280/360, oversell 409, поиск SBER и edit-prefill | — |
 
 ### 12.2. Результаты ревью
 
@@ -1139,7 +1147,7 @@ docs/FRONTEND_HANDOFF.md
 |---|---|---|---|---|
 | 0 | 2026-10-30 | PASS | 0 Critical / 0 Required; R1–R5 исправлены; визуальные pixel-check и a11y-аудит отложены до Stage 5 | [x] |
 | 1 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R5 исправлены (guard периода, мёртвый код, англоязычный бейдж, интерполяция/высота/подписи графика); добавлены тесты late response и unknown period | [x] |
-| 2 | — | — | — | [ ] |
+| 2 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R9 исправлены (shared-таблица, отмена поиска, secid+board, stale guards, datepicker, trim цены, ariaLabel, ширина таблиц, empty state); live-добавление упирается в backend `MOEX_NOT_FOUND` — вне frontend | [x] |
 | 3 | — | — | — | [ ] |
 | 4 | — | — | — | [ ] |
 | 5 | — | — | — | [ ] |

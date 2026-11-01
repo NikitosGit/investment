@@ -1,10 +1,85 @@
-<app-page-header
-  title="Портфель"
-  subtitle="Открытые позиции, средние цены и структура портфеля."
-/>
+<app-page-header title="Портфель" subtitle="Открытые позиции, средние цены и структура портфеля.">
+  <p-button label="Добавить актив" icon="pi pi-plus" (onClick)="openAssetSearch()" />
+</app-page-header>
 
-<app-empty-state
-  icon="pi pi-briefcase"
-  title="Портфель будет добавлен на следующем этапе"
-  message="Поиск бумаг, добавление активов и операции появятся после подключения данных."
+@if (initialLoading()) {
+  <app-loading-skeleton [cards]="3" [rows]="5" />
+} @else if (error() && !data()) {
+  <app-error-state [message]="errorMessage()" (retry)="retry()" />
+} @else if (data(); as positions) {
+  <div class="portfolio">
+    <section class="portfolio__cards" aria-label="Итоги портфеля">
+      <app-stat-card
+        label="Стоимость"
+        [value]="positions.total_market_value | money"
+        icon="pi pi-wallet"
+        severity="success"
+        [hint]="composition()"
+      />
+      <app-stat-card
+        label="Вложено"
+        [value]="positions.total_invested | money"
+        icon="pi pi-briefcase"
+        severity="info"
+        hint="Всего вложено в открытые позиции"
+      />
+      <app-stat-card
+        label="Позиции"
+        [value]="positionCount().toString()"
+        icon="pi pi-chart-bar"
+        [hint]="positionCount() === 1 ? 'открытая позиция' : 'открытых позиций'"
+      />
+    </section>
+
+    <section class="portfolio__panel" aria-labelledby="portfolio-positions-title">
+      <header class="portfolio__panel-head">
+        <div>
+          <h2 id="portfolio-positions-title">Открытые позиции</h2>
+          <p class="portfolio__hint">Средние цены и стоимость рассчитаны backend.</p>
+        </div>
+
+        <div class="portfolio__filter">
+          <span id="portfolio-filter-label" class="visually-hidden">Фильтр по типу актива</span>
+          <p-selectbutton
+            [options]="filterOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="filter()"
+            (ngModelChange)="onFilterChange($event)"
+            [allowEmpty]="false"
+            ariaLabelledBy="portfolio-filter-label"
+          />
+        </div>
+      </header>
+
+      @if (isEmpty()) {
+        <app-empty-state
+          icon="pi pi-briefcase"
+          title="В портфеле пока нет открытых позиций"
+          message="Добавьте бумагу из MOEX и внесите первую операцию покупки — после этого здесь появятся позиция и её стоимость."
+        >
+          <p-button label="Добавить актив" icon="pi pi-plus" (onClick)="openAssetSearch()" />
+        </app-empty-state>
+      } @else if (filterEmpty()) {
+        <div class="portfolio__filter-empty">
+          <p>По выбранному типу открытых позиций нет.</p>
+          <p-button
+            label="Показать все"
+            icon="pi pi-filter-slash"
+            severity="secondary"
+            [text]="true"
+            (onClick)="resetFilter()"
+          />
+        </div>
+      } @else {
+        <app-positions-table [positions]="filtered()" />
+      }
+    </section>
+  </div>
+}
+
+<app-asset-search-dialog
+  [visible]="assetSearchVisible()"
+  (visibleChange)="assetSearchVisible.set($event)"
+  (added)="onAssetAdded($event)"
 />

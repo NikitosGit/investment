@@ -1,0 +1,191 @@
+:host {
+  display: block;
+}
+
+.asset-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-5);
+}
+
+.asset-detail__panel {
+  padding: var(--app-space-5);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.asset-detail__panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+  margin-bottom: var(--app-space-4);
+}
+
+.asset-detail__panel-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.asset-detail__hint {
+  margin-top: var(--app-space-1);
+  color: var(--app-text-muted);
+  font-size: 0.875rem;
+}
+
+.asset-detail__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--app-space-3) var(--app-space-5);
+  margin: 0;
+}
+
+.asset-detail__facts dt {
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.asset-detail__facts dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.asset-detail__amortizations {
+  margin-top: var(--app-space-4);
+  padding-top: var(--app-space-3);
+  border-top: 1px solid var(--app-border);
+}
+
+.asset-detail__amortizations h3 {
+  margin-bottom: var(--app-space-2);
+  font-size: 1rem;
+}
+
+.asset-detail__amortizations ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.asset-detail__amortizations li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-3);
+}
+
+.asset-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--app-space-3);
+}
+
+.asset-detail__empty-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-2);
+  padding: var(--app-space-4);
+  color: var(--app-text-muted);
+  background: var(--app-surface-muted);
+  border-radius: var(--app-radius-sm);
+}
+
+.asset-detail__empty-row p {
+  margin: 0;
+}
+
+.asset-detail__muted {
+  margin: 0;
+  color: var(--app-text-muted);
+}
+
+.asset-detail__loading-row {
+  display: flex;
+  justify-content: center;
+  padding: var(--app-space-5);
+}
+
+.asset-detail__note {
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+
+.asset-detail__actions {
+  white-space: nowrap;
+}
+
+.asset-detail__link {
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.asset-detail__income {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--app-space-4);
+}
+
+.asset-detail__income-group h3 {
+  margin-bottom: var(--app-space-2);
+  font-size: 1rem;
+}
+
+.asset-detail__mini-scroll {
+  overflow-x: auto;
+}
+
+.asset-detail__mini-table {
+  min-width: 320px;
+  font-size: 0.9375rem;
+}
+
+.asset-detail__mini-table th,
+.asset-detail__mini-table td {
+  padding: var(--app-space-2) var(--app-space-1);
+  border-bottom: 1px solid var(--app-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.asset-detail__mini-table th {
+  color: var(--app-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.asset-detail__mini-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.asset-detail-table ::ng-deep .p-datatable-header-cell,
+.asset-detail-table ::ng-deep .p-datatable-tbody > tr > td {
+  white-space: nowrap;
+}
+
+.asset-detail-table ::ng-deep .p-datatable-tbody > tr > td.asset-detail__note {
+  white-space: normal;
+}
+
+@media (max-width: 720px) {
+  .asset-detail__panel {
+    padding: var(--app-space-4);
+  }
+
+  .asset-detail__panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

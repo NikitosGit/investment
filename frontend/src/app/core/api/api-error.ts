@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 
-import type { ApiErrorBody } from './models';
+import type { ApiErrorBody, ValidationFieldError } from './models';
 
 /** Default user-facing messages (never expose raw payloads or stack traces). */
 const NETWORK_MESSAGE = 'Нет связи с backend';
@@ -127,6 +127,38 @@ export function mapHttpError(error: unknown): ApiError {
   }
 
   return new ApiError(0, 'UNKNOWN_ERROR', UNKNOWN_MESSAGE, {}, error);
+}
+
+/**
+ * Read the structured field errors of a `422 VALIDATION_ERROR`.
+ *
+ * The backend stores them in `details.errors`; unknown shapes are ignored so a
+ * form can still show the general message from `ApiError.message`.
+ */
+export function validationErrors(error: ApiError): ValidationFieldError[] {
+  const raw = error.details['errors'];
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.flatMap((item) => {
+    if (!isRecord(item) || typeof item['field'] !== 'string' || typeof item['message'] !== 'string') {
+      return [];
+    }
+
+    return [
+      {
+        field: item['field'],
+        message: item['message'],
+        type: typeof item['type'] === 'string' ? item['type'] : 'value_error',
+      },
+    ];
+  });
+}
+
+/** Strip the `body.`/`query.`/`path.` prefix from a backend field path. */
+export function formFieldName(field: string): string {
+  return field.replace(/^(?:body|query|path)\./, '');
 }
 
 /**

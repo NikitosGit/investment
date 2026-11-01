@@ -1,0 +1,50 @@
+:host {
+  display: block;
+}
+
+.operation-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-4);
+  padding-top: var(--app-space-1);
+}
+
+.operation-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+}
+
+.operation-form__label {
+  font-weight: 600;
+}
+
+.operation-form__hint {
+  color: var(--app-text-muted);
+  font-size: 0.8125rem;
+}
+
+.operation-form__error {
+  color: var(--app-danger);
+  font-size: 0.8125rem;
+}
+
+.operation-form__message {
+  display: block;
+}
+
+.operation-form__datepicker {
+  width: 100%;
+}
+
+.operation-form ::ng-deep .p-selectbutton .p-togglebutton-checked {
+  color: var(--app-primary-hover);
+  background: var(--app-primary-soft);
+  border-color: var(--app-primary);
+}
+
+.operation-form ::ng-deep input.p-inputtext,
+.operation-form ::ng-deep textarea,
+.operation-form__datepicker ::ng-deep .p-datepicker-input {
+  width: 100%;
+}

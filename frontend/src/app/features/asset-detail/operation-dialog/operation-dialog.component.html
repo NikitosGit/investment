@@ -1,0 +1,141 @@
+<p-dialog
+  [header]="title()"
+  [visible]="visible()"
+  (visibleChange)="visible.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [style]="{ width: '560px' }"
+  [breakpoints]="{ '600px': '95vw' }"
+  styleClass="operation-dialog"
+>
+  <form class="operation-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="operation-form__field">
+      <span id="operation-type-label" class="operation-form__label">Тип операции</span>
+      <p-selectbutton
+        formControlName="type"
+        [options]="typeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        ariaLabelledBy="operation-type-label"
+      />
+    </div>
+
+    <div class="operation-form__field">
+      <label class="operation-form__label" for="operation-trade-date">Дата сделки</label>
+      <p-datepicker
+        inputId="operation-trade-date"
+        formControlName="trade_date"
+        dateFormat="dd.mm.yy"
+        [showIcon]="true"
+        [showOnFocus]="false"
+        appendTo="body"
+        styleClass="operation-form__datepicker"
+      />
+      @if (showError('trade_date')) {
+        <small id="operation-trade-date-error" class="operation-form__error">
+          {{ errorText('trade_date') }}
+        </small>
+      }
+    </div>
+
+    <div class="operation-form__field">
+      <label class="operation-form__label" for="operation-quantity">Количество, шт.</label>
+      <input
+        pInputText
+        id="operation-quantity"
+        formControlName="quantity"
+        inputmode="numeric"
+        autocomplete="off"
+        [attr.aria-describedby]="showError('quantity') ? 'operation-quantity-error' : 'operation-quantity-hint'"
+      />
+      @if (showError('quantity')) {
+        <small id="operation-quantity-error" class="operation-form__error">
+          {{ errorText('quantity') }}
+        </small>
+      } @else {
+        <small id="operation-quantity-hint" class="operation-form__hint">
+          Целое число больше нуля.
+        </small>
+      }
+    </div>
+
+    <div class="operation-form__field">
+      <label class="operation-form__label" for="operation-price">{{ priceLabel() }}</label>
+      <input
+        pInputText
+        id="operation-price"
+        formControlName="price"
+        inputmode="decimal"
+        autocomplete="off"
+        [attr.aria-describedby]="showError('price') ? 'operation-price-error' : null"
+      />
+      @if (showError('price')) {
+        <small id="operation-price-error" class="operation-form__error">
+          {{ errorText('price') }}
+        </small>
+      }
+    </div>
+
+    @if (isBond()) {
+      <div class="operation-form__field">
+        <span id="operation-price-type-label" class="operation-form__label">Тип цены</span>
+        <p-selectbutton
+          formControlName="price_type"
+          [options]="priceTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          ariaLabelledBy="operation-price-type-label"
+        />
+        @if (faceValue()) {
+          <small class="operation-form__hint">Текущий номинал: {{ faceValue() | money }}</small>
+        }
+        <small class="operation-form__hint">
+          Рублёвый эквивалент рассчитает backend по номиналу на дату сделки.
+        </small>
+      </div>
+    }
+
+    <div class="operation-form__field">
+      <label class="operation-form__label" for="operation-note">Комментарий</label>
+      <textarea
+        pTextarea
+        id="operation-note"
+        formControlName="note"
+        rows="3"
+        maxlength="500"
+        [attr.aria-describedby]="showError('note') ? 'operation-note-error' : null"
+      ></textarea>
+      @if (showError('note')) {
+        <small id="operation-note-error" class="operation-form__error">
+          {{ errorText('note') }}
+        </small>
+      }
+    </div>
+
+    @if (serverError(); as message) {
+      <p-message severity="error" styleClass="operation-form__message">{{ message }}</p-message>
+    }
+  </form>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Отмена"
+      severity="secondary"
+      [text]="true"
+      [disabled]="saving()"
+      (onClick)="visible.set(false)"
+    />
+    <p-button
+      [label]="isEdit() ? 'Сохранить' : 'Создать'"
+      icon="pi pi-check"
+      [loading]="saving()"
+      [disabled]="saving()"
+      (onClick)="submit()"
+    />
+  </ng-template>
+</p-dialog>

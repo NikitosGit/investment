@@ -3,8 +3,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   ApiError,
   apiErrorFromBody,
+  formFieldName,
   mapHttpError,
   mapHttpErrorAsync,
+  validationErrors,
 } from './api-error';
 
 const ENVELOPE = {
@@ -68,6 +70,33 @@ describe('ApiError mapping', () => {
   it('passes an existing ApiError through unchanged', () => {
     const original = new ApiError(409, 'ASSET_IN_USE', 'Нельзя удалить актив');
     expect(mapHttpError(original)).toBe(original);
+  });
+
+  it('extracts structured 422 field errors', () => {
+    const error = apiErrorFromBody(422, {
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Ошибка валидации данных',
+        details: {
+          errors: [
+            { field: 'body.price', message: 'must be greater than 0', type: 'greater_than' },
+            { field: 'body.quantity', message: 'must be greater than 0', type: 'greater_than' },
+            { field: 42, message: 'ignored' },
+          ],
+        },
+      },
+    });
+
+    expect(validationErrors(error)).toEqual([
+      { field: 'body.price', message: 'must be greater than 0', type: 'greater_than' },
+      { field: 'body.quantity', message: 'must be greater than 0', type: 'greater_than' },
+    ]);
+    expect(formFieldName('body.price')).toBe('price');
+    expect(formFieldName('price')).toBe('price');
+  });
+
+  it('returns no field errors for a non-validation envelope', () => {
+    expect(validationErrors(new ApiError(409, 'ASSET_IN_USE', 'Нельзя удалить'))).toEqual([]);
   });
 
   it('reads a Blob error body asynchronously', async () => {

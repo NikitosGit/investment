@@ -1,0 +1,69 @@
+<p-table
+  [value]="positions()"
+  dataKey="asset.id"
+  [scrollable]="true"
+  size="small"
+  styleClass="positions-table"
+  [tableStyle]="{ 'min-width': '860px' }"
+>
+  <ng-template pTemplate="header">
+    <tr>
+      <th scope="col">Тикер / название</th>
+      <th scope="col">Тип</th>
+      <th scope="col" class="text-right">Количество</th>
+      <th scope="col" class="text-right">Средняя</th>
+      <th scope="col" class="text-right">Текущая цена</th>
+      <th scope="col" class="text-right">Стоимость</th>
+      <th scope="col" class="text-right">Доля</th>
+      <th scope="col">Источник цены</th>
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-position>
+    <tr>
+      <td>
+        <a
+          class="positions-table__asset-link"
+          data-position-link
+          [routerLink]="['/assets', position.asset.id]"
+          [attr.aria-label]="'Открыть карточку ' + position.asset.secid"
+        >
+          <span class="positions-table__ticker">{{ position.asset.secid }}</span>
+          <span class="positions-table__asset-name">{{ position.asset.name }}</span>
+        </a>
+      </td>
+      <td>
+        <p-tag
+          [value]="assetTypeLabel(position.asset.type)"
+          severity="secondary"
+          [rounded]="true"
+        />
+      </td>
+      <td class="text-right mono">{{ position.quantity }}</td>
+      <td class="text-right mono">
+        {{ position.avg_price | money }}
+        @if (position.avg_price_percent) {
+          <span class="positions-table__secondary">
+            {{ position.avg_price_percent | price }} %
+          </span>
+        }
+      </td>
+      <td class="text-right mono">
+        @if (position.current_price_type === 'PERCENT') {
+          {{ position.current_price | price }} %
+        } @else {
+          {{ position.current_price | money }}
+        }
+      </td>
+      <td class="text-right mono">{{ position.market_value | money }}</td>
+      <td class="text-right mono">{{ position.share | share }}</td>
+      <td>
+        <app-price-source-badge
+          [source]="toPriceSource(position.price_source)"
+          [isStale]="position.is_stale"
+          [priceDate]="position.price_date"
+        />
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

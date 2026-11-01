@@ -216,7 +216,7 @@ describe('DashboardPage', () => {
     const element = fixture.nativeElement as HTMLElement;
 
     const assetLinks = Array.from(
-      element.querySelectorAll<HTMLAnchorElement>('.dashboard__asset-link'),
+      element.querySelectorAll<HTMLAnchorElement>('p-table [data-position-link]'),
     ).map((link) => link.getAttribute('href'));
 
     expect(assetLinks).toEqual(['/assets/1', '/assets/2']);
@@ -335,9 +335,10 @@ describe('DashboardPage', () => {
   });
 
   it('shows an empty state with a portfolio CTA for an empty portfolio', () => {
-    dashboard.getDashboard.and.returnValue(
-      of(makeDashboard({ positions: [], upcoming_coupons: [], series: [] })),
-    );
+    const data = makeDashboard({ positions: [], upcoming_coupons: [], series: [] });
+    data.totals.assets_count = 0;
+    data.totals.positions_count = 0;
+    dashboard.getDashboard.and.returnValue(of(data));
 
     const fixture = create();
     const element = fixture.nativeElement as HTMLElement;
@@ -345,6 +346,20 @@ describe('DashboardPage', () => {
     expect(textOf(element)).toContain('Портфель пуст');
     expect(element.querySelector('app-empty-state a')?.getAttribute('href')).toBe('/portfolio');
     expect(element.querySelector('p-table')).toBeNull();
+  });
+
+  it('explains that assets exist but there are no open positions', () => {
+    const data = makeDashboard({ positions: [], upcoming_coupons: [], series: [] });
+    data.totals.assets_count = 2;
+    data.totals.positions_count = 0;
+    dashboard.getDashboard.and.returnValue(of(data));
+
+    const fixture = create();
+    const content = textOf(fixture.nativeElement as HTMLElement);
+
+    expect(content).toContain('Нет открытых позиций');
+    expect(content).toContain('Активы добавлены, но операций пока нет');
+    expect(content).not.toContain('Портфель пуст');
   });
 
   it('shows an error state on the initial failure and retries', () => {
