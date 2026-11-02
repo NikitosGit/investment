@@ -34,14 +34,14 @@ Frontend работает только с замороженным API `/api`, �
 
 ### 1.2. Входит
 
-- [ ] Просмотр итогов, позиций, графика стоимости и ближайших купонов.
-- [ ] Поиск бумаг в MOEX через backend и добавление актива.
-- [ ] Создание, редактирование и удаление операций BUY/SELL.
-- [ ] Карточка актива с позицией, операциями, доходами и историей цен.
-- [ ] Выплаченные и ожидаемые доходы, ручное добавление, подтверждение, редактирование, удаление.
-- [ ] Настройки: автообновление, период дашборда, refresh, backup, экспорт JSON/CSV, health.
-- [ ] Адаптивная светлая тема, русский интерфейс, доступность с клавиатуры.
-- [ ] Production-сборка, раздача через FastAPI, `start.ps1`.
+- [x] Просмотр итогов, позиций, графика стоимости и ближайших купонов.
+- [x] Поиск бумаг в MOEX через backend и добавление актива.
+- [x] Создание, редактирование и удаление операций BUY/SELL.
+- [x] Карточка актива с позицией, операциями, доходами и историей цен.
+- [x] Выплаченные и ожидаемые доходы, ручное добавление, подтверждение, редактирование, удаление.
+- [x] Настройки: автообновление, период дашборда, refresh, backup, экспорт JSON/CSV, health.
+- [x] Адаптивная светлая тема, русский интерфейс, доступность с клавиатуры.
+- [x] Production-сборка, раздача через FastAPI, `start.ps1`.
 
 ### 1.3. Не входит
 
@@ -178,27 +178,27 @@ frontend/
 
 ### 3.1. Правила слоёв
 
-- [ ] `core` не импортирует `features`.
-- [ ] `shared` не знает о бизнес-сервисах фич; принимает данные через `input()`.
-- [ ] `features` оркестрируют сервисы, состояние и UI.
-- [ ] `layout` содержит только оболочку и навигацию.
-- [ ] Компоненты standalone, без NgModule.
-- [ ] Все компоненты `ChangeDetectionStrategy.OnPush`.
-- [ ] Сервисы — `providedIn: 'root'`, кроме page-scoped state (если появится).
-- [ ] Никаких прямых `HttpClient` вызовов из компонентов: только через `core/services`.
+- [x] `core` не импортирует `features`.
+- [x] `shared` не знает о бизнес-сервисах фич; принимает данные через `input()`.
+- [x] `features` оркестрируют сервисы, состояние и UI.
+- [x] `layout` содержит только оболочку и навигацию.
+- [x] Компоненты standalone, без NgModule.
+- [x] Все компоненты `ChangeDetectionStrategy.OnPush`.
+- [x] Сервисы — `providedIn: 'root'`, кроме page-scoped state (если появится).
+- [x] Никаких прямых `HttpClient` вызовов из компонентов: только через `core/services`.
 
 ### 3.2. API-клиент
 
-- [ ] `ApiClient` инкапсулирует `HttpClient`, base URL `/api`, query params и типизацию.
-- [ ] Никаких `any` в публичных методах; типы — из `schema.ts`.
-- [ ] Ошибки нормализуются в `ApiError`.
-- [ ] Для скачивания файлов — отдельный метод с `observe: 'response'`, `responseType: 'blob'`.
-- [ ] Для отмены устаревших запросов (period switch) — `switchMap`/`AbortSignal`, чтобы не перезаписывать свежие данные старым ответом.
+- [x] `ApiClient` инкапсулирует `HttpClient`, base URL `/api`, query params и типизацию.
+- [x] Никаких `any` в публичных методах; типы — из `schema.ts`.
+- [x] Ошибки нормализуются в `ApiError`.
+- [x] Для скачивания файлов — отдельный метод с `observe: 'response'`, `responseType: 'blob'`.
+- [x] Для отмены устаревших запросов (period switch) — `switchMap`/`AbortSignal`, чтобы не перезаписывать свежие данные старым ответом.
 
 ### 3.3. Модели
 
-- [ ] Сгенерировать `schema.ts` из OpenAPI.
-- [ ] В `models.ts` сделать удобные алиасы:
+- [x] Сгенерировать `schema.ts` из OpenAPI.
+- [x] В `models.ts` сделать удобные алиасы:
 
 ```ts
 import type { components } from './schema';
@@ -215,8 +215,8 @@ export type Settings = components['schemas']['SettingsResponse'];
 export type Quote = components['schemas']['QuoteItem'];
 ```
 
-- [ ] Не редактировать `schema.ts` вручную.
-- [ ] Для ошибки добавить клиентский тип, потому что error envelope не входит в OpenAPI:
+- [x] Не редактировать `schema.ts` вручную.
+- [x] Для ошибки добавить клиентский тип, потому что error envelope не входит в OpenAPI:
 
 ```ts
 export interface ApiErrorBody {
@@ -232,14 +232,14 @@ export interface ApiErrorBody {
 
 ### 4.1. Базовые правила
 
-- [ ] Base URL в dev — `/api` через proxy; в prod — same origin.
-- [ ] Строковые деньги не парсить для расчётов; форматировать через `Intl.NumberFormat`.
-- [ ] Даты `YYYY-MM-DD` не пропускать через `new Date()` без необходимости.
-- [ ] Периоды дашборда и истории передавать на server-side query, не фильтровать массив на клиенте.
-- [ ] Не считать `market_value`, `invested`, `share`, `expected_coupons`, `income_paid_total` на клиенте.
-- [ ] Не считать `price_rub` для облигации на клиенте; показывать `price_rub` из ответа.
-- [ ] Списки не пагинировать; API не поддерживает pagination.
-- [ ] Все запросы типизировать; response mapping не должен менять деньги/даты.
+- [x] Base URL в dev — `/api` через proxy; в prod — same origin.
+- [x] Строковые деньги не парсить для расчётов; форматировать через `Intl.NumberFormat`.
+- [x] Даты `YYYY-MM-DD` не пропускать через `new Date()` без необходимости.
+- [x] Периоды дашборда и истории передавать на server-side query, не фильтровать массив на клиенте.
+- [x] Не считать `market_value`, `invested`, `share`, `expected_coupons`, `income_paid_total` на клиенте.
+- [x] Не считать `price_rub` для облигации на клиенте; показывать `price_rub` из ответа.
+- [x] Списки не пагинировать; API не поддерживает pagination.
+- [x] Все запросы типизировать; response mapping не должен менять деньги/даты.
 
 ### 4.2. Сервисы и endpoint'ы
 
@@ -258,14 +258,14 @@ export interface ApiErrorBody {
 
 ### 4.3. Обработка ошибок
 
-- [ ] `api-error.interceptor.ts` ловит `HttpErrorResponse`.
-- [ ] Если тело соответствует `ApiErrorBody`, создать `ApiError` с `status`, `code`, `message`, `details`.
-- [ ] Если сеть недоступна — клиентский код `NETWORK_ERROR` (не backend-код), сообщение «Нет связи с backend».
-- [ ] Если тело не JSON — `UNKNOWN_ERROR`.
-- [ ] Не показывать stack trace и сырой JSON пользователю.
-- [ ] Для `422` разобрать `details.errors[]` и подсветить поля формы.
-- [ ] Для `409` показывать `message` и, где есть, `details.available`.
-- [ ] Для blob-запросов экспорта ошибка приходит как `Blob`; в сервисе/interceptor прочитать его как текст и попытаться распарсить envelope, иначе показать общий текст.
+- [x] `api-error.interceptor.ts` ловит `HttpErrorResponse`.
+- [x] Если тело соответствует `ApiErrorBody`, создать `ApiError` с `status`, `code`, `message`, `details`.
+- [x] Если сеть недоступна — клиентский код `NETWORK_ERROR` (не backend-код), сообщение «Нет связи с backend».
+- [x] Если тело не JSON — `UNKNOWN_ERROR`.
+- [x] Не показывать stack trace и сырой JSON пользователю.
+- [x] Для `422` разобрать `details.errors[]` и подсветить поля формы.
+- [x] Для `409` показывать `message` и, где есть, `details.available`.
+- [x] Для blob-запросов экспорта ошибка приходит как `Blob`; в сервисе/interceptor прочитать его как текст и попытаться распарсить envelope, иначе показать общий текст.
 
 ```ts
 export class ApiError extends Error {
@@ -300,12 +300,12 @@ async load(period: Period): Promise<void> {
 }
 ```
 
-- [ ] Signals для данных, загрузки и ошибки.
-- [ ] `computed` — только для UI-производных (пусто/не пусто, фильтр по типу, флаг «есть partial»).
-- [ ] Мутации: сервис → toast → reload затронутого экрана.
-- [ ] Не держать глобальный store; каждый экран загружает нужные данные.
-- [ ] После создания операции/дохода перезагружать позиции, дашборд и карточку актива при возврате.
-- [ ] Для period switch использовать `switchMap` или проверку sequence id, чтобы late response не перетёр свежий.
+- [x] Signals для данных, загрузки и ошибки.
+- [x] `computed` — только для UI-производных (пусто/не пусто, фильтр по типу, флаг «есть partial»).
+- [x] Мутации: сервис → toast → reload затронутого экрана.
+- [x] Не держать глобальный store; каждый экран загружает нужные данные.
+- [x] После создания операции/дохода перезагружать позиции, дашборд и карточку актива при возврате.
+- [x] Для period switch использовать `switchMap` или проверку sequence id, чтобы late response не перетёр свежий.
 
 ## 5. Маршрутизация
 
@@ -367,11 +367,11 @@ export const routes: Routes = [
 ];
 ```
 
-- [ ] `provideRouter(routes, withComponentInputBinding())`.
-- [ ] `:id` читать через `input()`/`ActivatedRoute`; при смене id перезагружать данные.
-- [ ] Навигация в sidebar: Дашборд, Портфель, Доходы, Настройки.
-- [ ] Активная ссылка — `routerLinkActive`.
-- [ ] На мобильном — выпадающее меню/навигация (slide-down), без постоянного sidebar.
+- [x] `provideRouter(routes, withComponentInputBinding())`.
+- [x] `:id` читать через `input()`/`ActivatedRoute`; при смене id перезагружать данные.
+- [x] Навигация в sidebar: Дашборд, Портфель, Доходы, Настройки.
+- [x] Активная ссылка — `routerLinkActive`.
+- [x] На мобильном — выпадающее меню/навигация (slide-down), без постоянного sidebar.
 
 ## 6. Ошибки, загрузка, пустые состояния, уведомления
 
@@ -390,17 +390,17 @@ export const routes: Routes = [
 
 ### 6.2. Toast
 
-- [ ] Подключить `MessageService` и `<p-toast>` в shell.
-- [ ] Success — коротко, без технических деталей.
-- [ ] Error — `error.message`; при наличии `details` — не показывать весь объект, только понятные поля.
-- [ ] Не показывать toast на каждый HTTP-запрос; только на действия пользователя.
+- [x] Подключить `MessageService` и `<p-toast>` в shell.
+- [x] Success — коротко, без технических деталей.
+- [x] Error — `error.message`; при наличии `details` — не показывать весь объект, только понятные поля.
+- [x] Не показывать toast на каждый HTTP-запрос; только на действия пользователя.
 
 ### 6.3. Подтверждения
 
-- [ ] `ConfirmationService` + `<p-confirmdialog>`.
-- [ ] Подтверждать: удаление операции, удаление дохода, удаление актива, подтверждение выплаты купона.
-- [ ] В тексте удаления операции предупреждать: «Если после удаления история станет некорректной, backend отклонит операцию».
-- [ ] В тексте удаления актива: «Удалить можно только актив без операций и выплаченных доходов».
+- [x] `ConfirmationService` + `<p-confirmdialog>`.
+- [x] Подтверждать: удаление операции, удаление дохода, удаление актива, подтверждение выплаты купона.
+- [x] В тексте удаления операции предупреждать: «Если после удаления история станет некорректной, backend отклонит операцию».
+- [x] В тексте удаления актива: «Удалить можно только актив без операций и выплаченных доходов».
 
 ## 7. Dev proxy и production
 
@@ -431,18 +431,18 @@ export const routes: Routes = [
 }
 ```
 
-- [ ] `npm start` → `http://localhost:4200`.
-- [ ] Frontend обращается к `/api/...`, proxy уходит на `127.0.0.1:8000`.
-- [ ] CORS в dev не обязателен при proxy, но backend уже разрешает `localhost:4200` и `127.0.0.1:4200`.
+- [x] `npm start` → `http://localhost:4200`.
+- [x] Frontend обращается к `/api/...`, proxy уходит на `127.0.0.1:8000`.
+- [x] CORS в dev не обязателен при proxy, но backend уже разрешает `localhost:4200` и `127.0.0.1:4200`.
 
 ### 7.2. Production
 
-- [ ] `ng build` с production-конфигурацией.
-- [ ] Output: repo-root `dist/browser` (`D:\Work\ai test\dist\browser`); в `angular.json` задать `"outputPath": { "base": "../dist" }` (без этого Angular 20 положит сборку в `frontend/dist/<project>/browser`).
-- [ ] FastAPI раздаёт статику после API-роутов.
-- [ ] SPA fallback: неизвестные не-API пути возвращают `index.html`.
-- [ ] `/api/*`, `/docs`, `/openapi.json` не должны попадать в fallback.
-- [ ] Хэшированные assets кэшировать надолго; `index.html` — no-cache.
+- [x] `ng build` с production-конфигурацией.
+- [x] Output: repo-root `dist/browser` (`D:\Work\ai test\dist\browser`); в `angular.json` задать `"outputPath": { "base": "../dist" }` (без этого Angular 20 положит сборку в `frontend/dist/<project>/browser`).
+- [x] FastAPI раздаёт статику после API-роутов.
+- [x] SPA fallback: неизвестные не-API пути возвращают `index.html`.
+- [x] `/api/*`, `/docs`, `/openapi.json` не должны попадать в fallback.
+- [x] Хэшированные assets кэшировать надолго; `index.html` — no-cache.
 
 Вариант реализации (Stage 6):
 
@@ -472,23 +472,23 @@ if DIST_DIR.is_dir():
 
 Если используется `StaticFiles`, нужен subclass с fallback на `index.html` для 404, иначе deep links (`/assets/1`) получат JSON 404. В любом варианте проверить:
 
-- [ ] `/` → SPA.
-- [ ] `/dashboard` → SPA.
-- [ ] `/assets/1` → SPA.
-- [ ] `/api/health` → JSON.
-- [ ] `/docs` → Swagger.
-- [ ] `/openapi.json` → OpenAPI.
+- [x] `/` → SPA.
+- [x] `/dashboard` → SPA.
+- [x] `/assets/1` → SPA.
+- [x] `/api/health` → JSON.
+- [x] `/docs` → Swagger.
+- [x] `/openapi.json` → OpenAPI.
 
 ### 7.3. `start.ps1`
 
 Скрипт в корне репозитория:
 
-- [ ] Проверяет наличие `uv`; если нет — использует `python -m uv`.
-- [ ] Выполняет `alembic upgrade head` в `backend`.
-- [ ] Если нет `dist/browser/index.html` или передан `-Build` — выполняет `npm ci` (если нужно) и `npm run build` в `frontend`.
-- [ ] Запускает `uvicorn app.main:app --host 127.0.0.1 --port 8000`.
-- [ ] Опционально открывает `http://127.0.0.1:8000`.
-- [ ] Понятно сообщает, если Node/npm не установлены.
+- [x] Проверяет наличие `uv`; если нет — использует `python -m uv`.
+- [x] Выполняет `alembic upgrade head` в `backend`.
+- [x] Если нет `dist/browser/index.html` или передан `-Build` — выполняет `npm ci` (если нужно) и `npm run build` в `frontend`.
+- [x] Запускает `uvicorn app.main:app --host 127.0.0.1 --port 8000`.
+- [x] Опционально открывает `http://127.0.0.1:8000`.
+- [x] Понятно сообщает, если Node/npm не установлены.
 
 ```powershell
 param([switch]$Build)
@@ -952,7 +952,7 @@ frontend/src/app/features/**
 - [x] Component: клавиатурный сценарий диалога (Esc/focus).
 - [x] Unit: локальные форматтеры/склонения.
 - [x] Ручной E2E по чек-листу выше.
-- [x] Опционально: Playwright smoke — позже, не блокер MVP.
+- [ ] Опционально: Playwright smoke — позже, не блокер MVP.
 
 **Review checkpoint**
 
@@ -1037,65 +1037,65 @@ docs/FRONTEND_HANDOFF.md
 
 ### 9.1. Unit
 
-- [ ] Сервисы: корректные URL/params, mapping response, ошибки.
-- [ ] `ApiError`/interceptor: envelope, network, unknown, 422 details.
-- [ ] Папы/форматтеры: деньги, цены, проценты, даты, локаль.
-- [ ] Утилиты: парсинг `Content-Disposition`, fallback filename.
-- [ ] Валидаторы форм: quantity/price/date.
+- [x] Сервисы: корректные URL/params, mapping response, ошибки.
+- [x] `ApiError`/interceptor: envelope, network, unknown, 422 details.
+- [x] Папы/форматтеры: деньги, цены, проценты, даты, локаль.
+- [x] Утилиты: парсинг `Content-Disposition`, fallback filename.
+- [x] Валидаторы форм: quantity/price/date.
 
 ### 9.2. Component
 
-- [ ] Dashboard: карточки, period switch, partial/stale, empty/error.
-- [ ] Portfolio: фильтр, поиск/добавление, 409 duplicate.
-- [ ] Asset detail: загрузка, операция, oversell, delete.
-- [ ] Income: вкладки, фильтры, mark-paid, 409, overdue.
-- [ ] Settings: master-switch 400, refresh 409, backup, export.
-- [ ] Shell: навигация, мобильное меню, toast/confirm.
+- [x] Dashboard: карточки, period switch, partial/stale, empty/error.
+- [x] Portfolio: фильтр, поиск/добавление, 409 duplicate.
+- [x] Asset detail: загрузка, операция, oversell, delete.
+- [x] Income: вкладки, фильтры, mark-paid, 409, overdue.
+- [x] Settings: master-switch 400, refresh 409, backup, export.
+- [x] Shell: навигация, мобильное меню, toast/confirm.
 
 ### 9.3. Contract / integration
 
-- [ ] `openapi-typescript` генерирует типы без ошибок.
-- [ ] Contract smoke против seeded backend:
-  - [ ] `GET /api/health` 200;
-  - [ ] `GET /api/positions` содержит SBER/ОФЗ;
-  - [ ] `GET /api/dashboard?period=1Y` totals;
-  - [ ] `GET /api/income?status=PAID|EXPECTED`;
-  - [ ] `GET /api/settings`;
-  - [ ] `POST /api/backup`;
-  - [ ] `GET /api/export?format=json|csv`.
-- [ ] Проверить строковые деньги в ответах (не number).
+- [x] `openapi-typescript` генерирует типы без ошибок.
+- [x] Contract smoke против seeded backend:
+  - [x] `GET /api/health` 200;
+  - [x] `GET /api/positions` содержит SBER/ОФЗ;
+  - [x] `GET /api/dashboard?period=1Y` totals;
+  - [x] `GET /api/income?status=PAID|EXPECTED`;
+  - [x] `GET /api/settings`;
+  - [x] `POST /api/backup`;
+  - [x] `GET /api/export?format=json|csv`.
+- [x] Проверить строковые деньги в ответах (не number).
 
 ### 9.4. Build / CI
 
-- [ ] `npm ci`.
-- [ ] `npm run build`.
-- [ ] `npm test -- --watch=false --browsers=ChromeHeadless` (Karma + Jasmine через `@angular/build:karma`, Chrome/Edge headless).
-- [ ] Backend `pytest` как регресс.
-- [ ] CI не требует MOEX; seed и mock.
+- [x] `npm ci`.
+- [x] `npm run build`.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless` (Karma + Jasmine через `@angular/build:karma`, Chrome/Edge headless).
+- [x] Backend `pytest` как регресс.
+- [x] CI не требует MOEX; seed и mock.
 
 ### 9.5. E2E
 
-- [ ] Ручной сценарий из Stage 5 обязателен.
+- [x] Ручной сценарий из Stage 5 обязателен.
 - [ ] Playwright — опционально после MVP; не блокирует Definition of Done.
 
 ## 10. Definition of Done
 
-- [ ] Все этапы 0–6 отмечены `[x]`.
-- [ ] Все stage-level review checkpoints пройдены, findings закрыты или осознанно отложены.
-- [ ] `npm ci` с чистой установки.
-- [ ] `npm run build` без ошибок.
-- [ ] `npm test -- --watch=false --browsers=ChromeHeadless` зелёный (Karma + Jasmine через `@angular/build:karma`; `CHROME_BIN` указывает на Edge/Chrome).
-- [ ] Backend contract smoke на seeded БД.
-- [ ] Экраны работают на 360px, 768px, 1280px+.
-- [ ] Empty/error/loading/partial/stale/overdue состояния реализованы.
-- [ ] Русский интерфейс и `ru-RU` форматы.
-- [ ] Нет `parseFloat`/клиентских денежных расчётов.
-- [ ] `is_stale`, `price_source`, `is_partial` отображаются по правилам handoff.
-- [ ] Ошибки `409/400/422/502` обработаны.
-- [ ] Скачивание JSON/CSV работает, filename из `Content-Disposition`.
-- [ ] Production: `start.ps1`, FastAPI static + SPA fallback, deep links.
-- [ ] README frontend и handoff актуальны.
-- [ ] Финальное ревью PASS.
+- [x] Все этапы 0–6 отмечены `[x]`.
+- [x] Все stage-level review checkpoints пройдены, findings закрыты или осознанно отложены.
+- [x] `npm ci` с чистой установки.
+- [x] `npm run build` без ошибок.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless` зелёный (Karma + Jasmine через `@angular/build:karma`; `CHROME_BIN` указывает на Edge/Chrome).
+- [x] Backend contract smoke на seeded БД.
+- [x] Экраны работают на 360px, 768px, 1280px+.
+- [x] Empty/error/loading/partial/stale/overdue состояния реализованы.
+- [x] Русский интерфейс и `ru-RU` форматы.
+- [x] Нет `parseFloat`/клиентских денежных расчётов.
+- [x] `is_stale`, `price_source`, `is_partial` отображаются по правилам handoff.
+- [x] Ошибки `409/400/422/502` обработаны.
+- [x] Скачивание JSON/CSV работает, filename из `Content-Disposition`.
+- [x] Production: `start.ps1`, FastAPI static + SPA fallback, deep links.
+- [x] README frontend и handoff актуальны.
+- [x] Финальное ревью PASS.
 
 ## 11. Риски и решения
 
@@ -1118,13 +1118,13 @@ docs/FRONTEND_HANDOFF.md
 
 ### 11.1. Принятые решения
 
-- [ ] Angular 20.3.34 (CLI/build 20.3.42) standalone + signals; TypeScript 5.9.3, RxJS 7.8.2, Zone.js 0.15.1; без NgRx.
-- [ ] PrimeNG 20.4.0 (MIT) + `@primeuix/themes` 2.0.0 (MIT), Aura light; license key не требуется (22+/themes 3.x — коммерческие, вне MVP).
-- [ ] Chart.js 4.4.9 через PrimeNG `p-chart`, изолированно.
-- [ ] Деньги/цены — строки; форматирование `Intl.NumberFormat('ru-RU')`.
-- [ ] Периоды — server-side query; клиент не фильтрует series.
-- [ ] Ошибки — единый `ApiError`; тосты для действий, inline для загрузки.
-- [ ] Production — FastAPI same origin, SPA fallback, `start.ps1`.
+- [x] Angular 20.3.34 (CLI/build 20.3.42) standalone + signals; TypeScript 5.9.3, RxJS 7.8.2, Zone.js 0.15.1; без NgRx.
+- [x] PrimeNG 20.4.0 (MIT) + `@primeuix/themes` 2.0.0 (MIT), Aura light; license key не требуется (22+/themes 3.x — коммерческие, вне MVP).
+- [x] Chart.js 4.4.9 через PrimeNG `p-chart`, изолированно.
+- [x] Деньги/цены — строки; форматирование `Intl.NumberFormat('ru-RU')`.
+- [x] Периоды — server-side query; клиент не фильтрует series.
+- [x] Ошибки — единый `ApiError`; тосты для действий, inline для загрузки.
+- [x] Production — FastAPI same origin, SPA fallback, `start.ps1`.
 
 ## 12. Журнал изменений и ревью
 
@@ -1186,4 +1186,4 @@ Optional:
 
 ---
 
-**Итог:** после выполнения этапов 0–6 приложение должно запускаться одной командой, работать на seeded-данных без сети, корректно обрабатывать ошибки API и отдавать production-сборку через FastAPI.
+**Итог:** этапы 0–6 завершены и прошли ревью; приложение запускается одной командой, работает на seeded-данных без сети, корректно обрабатывает ошибки API и отдаёт production-сборку через FastAPI.
