@@ -1,10 +1,263 @@
 <app-page-header
   title="Настройки"
-  subtitle="Период дашборда, автообновление котировок, резервные копии и экспорт."
+  subtitle="Состояние системы, параметры дашборда, резервные копии и экспорт данных."
 />
 
-<app-empty-state
-  icon="pi pi-cog"
-  title="Настройки будут добавлены на следующем этапе"
-  message="Управление параметрами, backup и экспорт появятся после подключения данных."
-/>
+<div class="settings">
+  <section class="settings__panel" aria-labelledby="settings-health-title">
+    <header class="settings__panel-head">
+      <div>
+        <h2 id="settings-health-title">Состояние системы</h2>
+        <p class="settings__hint">
+          Проверка API, базы данных и последнего обновления котировок.
+        </p>
+      </div>
+
+      <p-button
+        [label]="refreshButtonLabel()"
+        icon="pi pi-refresh"
+        [loading]="refreshing()"
+        [disabled]="refreshing()"
+        (onClick)="refreshQuotes()"
+      />
+    </header>
+
+    @if (initialHealthLoading()) {
+      <app-loading-skeleton [rows]="4" />
+    } @else if (healthError() && !health()) {
+      <app-error-state
+        title="Не удалось загрузить состояние системы"
+        [message]="healthErrorMessage()"
+        (retry)="loadHealth()"
+      />
+    } @else if (health(); as healthData) {
+      <dl class="settings__defs">
+        <dt>Статус API</dt>
+        <dd>
+          <p-tag
+            [value]="healthStatusLabel(healthData.status)"
+            [severity]="healthStatusSeverity(healthData.status)"
+            [rounded]="true"
+          />
+        </dd>
+
+        <dt>Версия</dt>
+        <dd class="mono">{{ healthData.version }}</dd>
+
+        <dt>База данных</dt>
+        <dd>
+          <p-tag
+            [value]="databaseStatusLabel(healthData.database)"
+            [severity]="databaseStatusSeverity(healthData.database)"
+            [rounded]="true"
+          />
+        </dd>
+
+        <dt>MOEX</dt>
+        <dd>
+          <p-tag
+            [value]="moexStatusLabel(healthData.moex)"
+            [severity]="moexStatusSeverity(healthData.moex)"
+            [rounded]="true"
+          />
+        </dd>
+
+        <dt>Последнее обновление котировок</dt>
+        <dd>
+          @if (healthData.last_quote_refresh_at) {
+            {{ healthData.last_quote_refresh_at | date }}
+          } @else {
+            Ещё не обновлялось
+          }
+        </dd>
+      </dl>
+    }
+
+    @if (refreshResult(); as result) {
+      <div class="settings__result settings__refresh" role="status" aria-live="polite">
+        <h3>Результат обновления котировок</h3>
+
+        <dl class="settings__defs settings__defs--compact">
+          <dt>Обновлено</dt>
+          <dd class="mono">{{ result.updated }}</dd>
+
+          <dt>С ошибками</dt>
+          <dd class="mono">{{ result.failed }}</dd>
+
+          <dt>Последнее обновление</dt>
+          <dd>{{ result.last_refresh_at | date }}</dd>
+        </dl>
+
+        @if (result.errors.length > 0) {
+          <div class="settings__errors">
+            <h4>Не удалось обновить</h4>
+            <ul>
+              @for (item of result.errors; track $index) {
+                <li>
+                  <strong>{{ item.secid }}</strong> — {{ item.error }}
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <section class="settings__panel" aria-labelledby="settings-params-title">
+    <header class="settings__panel-head">
+      <div>
+        <h2 id="settings-params-title">Параметры</h2>
+        <p class="settings__hint">
+          Изменения сохраняются сразу и не требуют перезагрузки страницы.
+        </p>
+      </div>
+    </header>
+
+    @if (initialSettingsLoading()) {
+      <app-loading-skeleton [rows]="2" />
+    } @else if (settingsError() && !settings()) {
+      <app-error-state
+        title="Не удалось загрузить параметры"
+        [message]="settingsErrorMessage()"
+        (retry)="loadSettings()"
+      />
+    } @else if (settings()) {
+      <div class="settings__fields">
+        <div class="settings__field settings__field--switch">
+          <div class="settings__field-text">
+            <label class="settings__label" id="quote-refresh-label" for="quote-refresh-enabled">
+              Автоматическое обновление котировок
+            </label>
+            <p class="settings__helper" id="quote-refresh-help">
+              Плановое обновление цен по расписанию. Ручное обновление котировок доступно
+              всегда; переключатель влияет только на автоматический запуск.
+            </p>
+          </div>
+
+          <p-toggleswitch
+            inputId="quote-refresh-enabled"
+            [ngModel]="quoteRefreshEnabled()"
+            (ngModelChange)="onQuoteRefreshChange($event)"
+            [disabled]="saving()"
+            [ariaLabelledBy]="'quote-refresh-label'"
+          />
+        </div>
+
+        <div class="settings__field">
+          <label class="settings__label" id="dashboard-period-label">
+            Период дашборда
+          </label>
+          <p-select
+            inputId="dashboard-period"
+            [options]="periodOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="dashboardPeriod()"
+            (ngModelChange)="onDashboardPeriodChange($event)"
+            [disabled]="saving()"
+            [ariaLabelledBy]="'dashboard-period-label'"
+          />
+          <p class="settings__helper" id="dashboard-period-help">
+            Этот период используется дашбордом по умолчанию, если период не выбран явно.
+          </p>
+        </div>
+      </div>
+
+      <p class="settings__saving" role="status" aria-live="polite">
+        @if (saving()) {
+          Сохраняем настройку…
+        }
+      </p>
+    }
+  </section>
+
+  <section class="settings__panel" aria-labelledby="settings-data-title">
+    <header class="settings__panel-head">
+      <div>
+        <h2 id="settings-data-title">Данные</h2>
+        <p class="settings__hint">
+          Резервная копия базы и выгрузка портфеля для хранения или анализа.
+        </p>
+      </div>
+    </header>
+
+    <div class="settings__data-grid">
+      <article class="settings__card" aria-labelledby="settings-backup-title">
+        <h3 id="settings-backup-title">Резервная копия</h3>
+        <p class="settings__helper">
+          Копия SQLite-базы создаётся на сервере и не скачивается по HTTP. Забрать файл можно
+          напрямую с машины, где работает backend.
+        </p>
+
+        <div class="settings__actions">
+          <p-button
+            label="Создать backup"
+            icon="pi pi-database"
+            [loading]="backupLoading()"
+            [disabled]="backupLoading()"
+            (onClick)="createBackup()"
+          />
+        </div>
+
+        <div class="settings__result" role="status" aria-live="polite">
+          @if (backupLoading()) {
+            <p class="settings__muted">Создаём резервную копию…</p>
+          } @else if (backupError()) {
+            <p class="settings__error-text" role="alert">
+              Резервная копия не создана: {{ backupErrorMessage() }}. Можно повторить попытку.
+            </p>
+          } @else if (backup(); as backupData) {
+            <dl class="settings__defs settings__defs--compact">
+              <dt>Путь</dt>
+              <dd><code class="settings__path">{{ backupData.path }}</code></dd>
+
+              <dt>Размер</dt>
+              <dd class="mono">{{ formatFileSize(backupData.size_bytes) }}</dd>
+
+              <dt>Создан</dt>
+              <dd>{{ backupData.created_at | date }}</dd>
+            </dl>
+          } @else {
+            <p class="settings__muted">В этой сессии резервная копия ещё не создавалась.</p>
+          }
+        </div>
+      </article>
+
+      <article class="settings__card" aria-labelledby="settings-export-title">
+        <h3 id="settings-export-title">Экспорт данных</h3>
+        <p class="settings__helper">
+          JSON — человекочитаемая проекция всех данных. CSV — ZIP-архив с тремя файлами:
+          positions.csv, operations.csv и income.csv.
+        </p>
+
+        <div class="settings__actions">
+          <p-button
+            label="Экспорт JSON"
+            icon="pi pi-file"
+            [loading]="exporting() === 'json'"
+            [disabled]="exporting() !== null"
+            (onClick)="exportData('json')"
+          />
+          <p-button
+            label="Экспорт CSV"
+            icon="pi pi-file-export"
+            severity="secondary"
+            [outlined]="true"
+            [loading]="exporting() === 'csv'"
+            [disabled]="exporting() !== null"
+            (onClick)="exportData('csv')"
+          />
+        </div>
+
+        <div class="settings__result" role="status" aria-live="polite">
+          @if (exporting()) {
+            <p class="settings__muted">Готовим файл…</p>
+          } @else if (exportStatus()) {
+            <p class="settings__muted">{{ exportStatus() }}</p>
+          }
+        </div>
+      </article>
+    </div>
+  </section>
+</div>

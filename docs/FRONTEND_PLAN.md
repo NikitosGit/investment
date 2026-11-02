@@ -14,7 +14,7 @@
 | 1 | Data layer + Dashboard | [x] | [x] |
 | 2 | Portfolio + asset search/add + asset detail + operations CRUD | [x] | [x] |
 | 3 | Income | [x] | [x] |
-| 4 | Settings/system | [ ] | [ ] |
+| 4 | Settings/system | [x] | [x] |
 | 5 | UX polish, responsive, a11y, ru-RU, E2E | [ ] | [ ] |
 | 6 | Production integration, final tests, docs | [ ] | [ ] |
 
@@ -832,23 +832,23 @@ frontend/src/app/shared/ui/stat-card/**
 
 ---
 
-### [ ] Этап 4. Settings/system
+### [x] Этап 4. Settings/system
 
 **Цель:** экран настроек и системных операций: health, refresh, настройки, backup, экспорт.
 
 **Deliverables**
 
-- [ ] `SettingsPage`: health card (status, version, database, moex, last refresh).
-- [ ] Кнопка «Обновить котировки» → `POST /api/quotes/refresh`; loading, disable, результат `updated/failed/errors`.
-- [ ] После refresh — reload health, dashboard, positions.
-- [ ] Обработка `409 REFRESH_IN_PROGRESS` и частичных ошибок `errors[]`.
-- [ ] Переключатель `quote_refresh_enabled`; `PATCH /api/settings`; при `400` — revert + объяснение master-switch.
-- [ ] Select `dashboard_period` (`1M/3M/1Y/ALL`); `PATCH /api/settings`; helper text, что это default для дашборда.
-- [ ] Кнопка «Создать backup» → `POST /api/backup`; показать `path`, `size_bytes`, `created_at`; пояснить, что файл не скачивается по HTTP.
-- [ ] Кнопки «Экспорт JSON» и «Экспорт CSV» → `GET /api/export?format=...`; blob + filename из `Content-Disposition`.
-- [ ] Fallback имени файла, если заголовок недоступен.
-- [ ] Empty/error/loading для системных карточек.
-- [ ] Никаких секретов/ключей на экране.
+- [x] `SettingsPage`: health card (status, version, database, moex, last refresh).
+- [x] Кнопка «Обновить котировки» → `POST /api/quotes/refresh`; loading, disable, результат `updated/failed/errors`.
+- [x] После refresh — reload health, dashboard, positions.
+- [x] Обработка `409 REFRESH_IN_PROGRESS` и частичных ошибок `errors[]`.
+- [x] Переключатель `quote_refresh_enabled`; `PATCH /api/settings`; при `400` — revert + объяснение master-switch.
+- [x] Select `dashboard_period` (`1M/3M/1Y/ALL`); `PATCH /api/settings`; helper text, что это default для дашборда.
+- [x] Кнопка «Создать backup» → `POST /api/backup`; показать `path`, `size_bytes`, `created_at`; пояснить, что файл не скачивается по HTTP.
+- [x] Кнопки «Экспорт JSON» и «Экспорт CSV» → `GET /api/export?format=...`; blob + filename из `Content-Disposition`.
+- [x] Fallback имени файла, если заголовок недоступен.
+- [x] Empty/error/loading для системных карточек.
+- [x] Никаких секретов/ключей на экране.
 
 **Files/areas**
 
@@ -870,32 +870,32 @@ frontend/src/app/core/services/system.service.ts
 
 **Acceptance criteria**
 
-- [ ] Health показывает `status=ok`, `version=0.1.0`, `database=ok`; `moex` — `unknown`/`ok`/`error` в зависимости от последнего refresh (в offline seed обычно `unknown` или `error`).
-- [ ] Refresh с сетью обновляет статус; без сети показывает ошибку/частичный результат, не падает.
-- [ ] Повторный refresh во время выполнения показывает 409-сообщение.
-- [ ] Переключение `dashboard_period` сохраняется и влияет на дашборд без query.
-- [ ] При env-master-switch `false` включение auto-refresh показывает 400 и возвращает switch.
-- [ ] Backup показывает путь/размер/время.
-- [ ] JSON и CSV скачиваются с правильными именами; CSV — ZIP.
-- [ ] Нет попытки скачать backup по HTTP.
+- [x] Health показывает `status=ok`, `version=0.1.0`, `database=ok`; `moex` — `unknown`/`ok`/`error` в зависимости от последнего refresh (в offline seed обычно `unknown` или `error`).
+- [x] Refresh с сетью обновляет статус; без сети показывает ошибку/частичный результат, не падает.
+- [x] Повторный refresh во время выполнения показывает 409-сообщение.
+- [x] Переключение `dashboard_period` сохраняется и влияет на дашборд без query.
+- [x] При env-master-switch `false` включение auto-refresh показывает 400 и возвращает switch.
+- [x] Backup показывает путь/размер/время.
+- [x] JSON и CSV скачиваются с правильными именами; CSV — ZIP.
+- [x] Нет попытки скачать backup по HTTP.
 
 **Tests**
 
-- [ ] Unit: `SettingsService.patch` отправляет только изменённые поля.
-- [ ] Unit: `SystemService.export` читает `Content-Disposition`.
-- [ ] Component: master-switch 400 → revert + toast.
-- [ ] Component: refresh 409 и частичные errors.
-- [ ] Component: backup result отображается.
-- [ ] Component: export создаёт blob и ссылку (mock `URL.createObjectURL`).
+- [x] Unit: `SettingsService.patch` отправляет только изменённые поля.
+- [x] Unit: `SystemService.export` читает `Content-Disposition`.
+- [x] Component: master-switch 400 → revert + toast.
+- [x] Component: refresh 409 и частичные errors.
+- [x] Component: backup result отображается.
+- [x] Component: export создаёт blob и ссылку (mock `URL.createObjectURL`).
 
 **Review checkpoint**
 
-- [ ] Ревью master-switch семантики.
-- [ ] Ревью скачивания: blob, filename, revoke, ошибки.
-- [ ] Ревью длительных операций: loading, disable, отсутствие параллельных refresh.
-- [ ] Ревью безопасности: нет ключей/путей, кроме backup path.
+- [x] Ревью master-switch семантики.
+- [x] Ревью скачивания: blob, filename, revoke, ошибки.
+- [x] Ревью длительных операций: loading, disable, отсутствие параллельных refresh.
+- [x] Ревью безопасности: нет ключей/путей, кроме backup path.
 
-**Review findings / status:** _не заполнено; заполняется после ревью._
+**Review findings / status:** **PASS после исправлений** — 2026-11-02, ревью по skill `code-review-and-quality`. Исправлено в ходе ревью: (R1) в `400` master-switch убран дубль сообщения backend — остался один текст с пояснением; (O1/O3) добавлен `backupError` + inline-сообщение в карточке backup, очистка прошлого результата при старте и ошибке, retry доступен; (O2) добавлены DOM-тесты клика по toggle и смены select; (O5) `refreshResult` очищается при старте refresh и при `409 REFRESH_IN_PROGRESS`; убран `for` у label периода (связь через `aria-labelledby`); warning-цвета переведены на токены (`color-mix` с `--app-warning`). Проверки: **231 Karma-тест** в Chrome headless (Edge через `CHROME_BIN`), `npm run build`; live read-only `/settings`: health `ok/0.1.0/database ok/moex ok`, settings `quote_refresh_enabled=true/1Y`, backup `200` с path/size/time, export JSON/ZIP с правильными `Content-Disposition`, backup по HTTP не отдаётся, 360/1280 без горизонтального скролла. Ограничения: live refresh/409/400 master-switch не запускались (покрыты unit-тестами); `aria-describedby` для helper text и nested live-region — Stage 5.
 
 ---
 
@@ -1140,6 +1140,7 @@ docs/FRONTEND_HANDOFF.md
 | 2026-11-01 | 2 | Этап 2 завершён и прошёл ревью (**PASS после исправлений**): портфель с фильтром и поиском MOEX, карточка актива, операции BUY/SELL, доходы и история цен; shared-таблица позиций, guards от stale-ответов, 161 Karma-тест, build, live 1280/360, oversell 409, поиск SBER и edit-prefill | — |
 | 2026-11-01 | 3 | Этап 3 завершён и прошёл ревью (PASS после исправлений): доходы PAID/EXPECTED, серверные фильтры, портфельные totals, ручной доход, edit PAID/EXPECTED, mark-paid + 409, delete confirm; 207 Karma-тестов, build, live /income | — |
 | 2026-11-01 | backend | Исправлен MOEX ISS: `/securities/{secid}.json` теперь `description`+`boards`; LOTSIZE из board-endpoint, INITIALFACEVALUE/FACEVALUE и amortdate; live add/delete GAZP проверены, 478 backend tests | — |
+| 2026-11-02 | 4 | Этап 4 завершён и прошёл ревью (PASS после исправлений): health/refresh, настройки с revert 400, backup, экспорт JSON/CSV; 231 Karma-тест, build, live read-only /settings, backup/export | — |
 
 ### 12.2. Результаты ревью
 
@@ -1151,7 +1152,7 @@ docs/FRONTEND_HANDOFF.md
 | 1 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R5 исправлены (guard периода, мёртвый код, англоязычный бейдж, интерполяция/высота/подписи графика); добавлены тесты late response и unknown period | [x] |
 | 2 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R9 исправлены (shared-таблица, отмена поиска, secid+board, stale guards, datepicker, trim цены, ariaLabel, ширина таблиц, empty state); backend MOEX ISS fix выполнен и live-проверен; ОФЗ TQOB — отдельное ограничение MVP | [x] |
 | 3 | 2026-11-01 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O4 + N1/N2/N4 закрыты; live read-only /income; данные live-БД разошлись с seed из-за MOEX-синхронизации | [x] |
-| 4 | — | — | — | [ ] |
+| 4 | 2026-11-02 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O3/O5 + Nit закрыты; live read-only health/settings/backup/export; refresh/409/400 покрыты unit-тестами | [x] |
 | 5 | — | — | — | [ ] |
 | 6 | — | — | — | [ ] |
 
