@@ -14,7 +14,7 @@ Frontend — Angular-приложение для одного локальног
 - Нет авторизации, токенов и ролей.
 - Нет бизнес-расчётов на клиенте: средняя цена, стоимость, доли, купоны и итоги приходят с backend.
 - Backend слушает `127.0.0.1`; приложение не предназначено для публикации в сеть без отдельной проработки безопасности.
-- Контракт API считается замороженным. Любое изменение — только через новую версию OpenAPI и согласование. На этапе production допускается только добавление раздачи статики/SPA fallback в FastAPI без изменения `/api`.
+- Контракт API считается замороженным. Любое изменение — только через новую версию OpenAPI и согласование. Production-раздача статики/SPA fallback добавлена в FastAPI (`backend/app/main.py`); API-контракт не менялся.
 
 ## 2. Запуск backend
 
@@ -78,6 +78,23 @@ Seed офлайн-идемпотентен: повторный запуск не
 - CORS по умолчанию: `http://localhost:4200` и `http://127.0.0.1:4200`.
 - CORS отдаёт наружу `Content-Disposition` и `X-Request-ID`.
 - Авторизации нет; сервис рассчитан на локальный запуск.
+
+### 2.6. Production
+
+```powershell
+# из корня репозитория: миграции, сборка при необходимости, uvicorn + браузер
+.\start.ps1
+.\start.ps1 -Build                  # принудительно пересобрать frontend
+.\start.ps1 -Port 8010              # другой порт
+.\start.ps1 -NoBrowser              # не открывать браузер
+.\start.ps1 -HealthTimeoutSeconds 120  # таймаут ожидания /api/health
+```
+
+- Build output: repo-root `dist/browser` (`dist/browser/index.html`).
+- FastAPI раздаёт `/`, `/dashboard`, `/assets/1` как SPA (`index.html`), deep links не дают 404.
+- `/api/*`, `/docs`, `/openapi.json` не перехватываются SPA-fallback.
+- `index.html` — `Cache-Control: no-cache`; content-hashed assets — `public, max-age=31536000, immutable`.
+- Чистая проверка frontend: `npm ci && npm run build`, затем `npm test -- --watch=false --browsers=ChromeHeadless` (с `CHROME_BIN`); backend — `uv run pytest`/`python -m uv run pytest`.
 
 ## 3. Базовые соглашения
 

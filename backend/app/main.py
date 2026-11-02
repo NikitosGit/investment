@@ -1,14 +1,20 @@
 """FastAPI application factory and lifecycle."""
 
 import logging
+import re
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.routing import APIRoute
 from sqlalchemy.exc import SQLAlchemyError
+from starlette.routing import Match
+from starlette.types import Scope
 
 from app.api.error_handlers import register_exception_handlers
 from app.api.router import api_router
@@ -20,6 +26,76 @@ from app.providers.moex.client import MoexClient
 from app.services import portfolio_service
 
 logger = logging.getLogger(__name__)
+
+DIST_DIR = (Path(__file__).resolve().parents[2] / "dist" / "browser").resolve()
+
+# Angular appends an eight-character content hash before the extension. Only
+# such files are safe to cache forever; favicon.ico and untouched public files
+# keep their names across releases and must stay revalidated.
+_HASHED_ASSET_RE = re.compile(r"-[A-Za-z0-9]{8}\.[^.]+$")
+
+
+def _static_cache_control(path: Path) -> str:
+    """Return a Cache-Control value for a file served from the SPA build."""
+
+    if path.name == "index.html":
+        return "no-cache"
+    if _HASHED_ASSET_RE.search(path.name):
+        return "public, max-age=31536000, immutable"
+    return "public, max-age=3600"
+
+
+def _is_reserved_path(full_path: str) -> bool:
+    """Return True for paths that must never fall through to the SPA."""
+
+    path = full_path.strip("/")
+    if path == "api" or path.startswith("api/"):
+        return True
+    reserved = ("docs", "redoc", "openapi.json")
+    return any(path == prefix or path.startswith(f"{prefix}/") for prefix in reserved)
+
+
+class _SpaRoute(APIRoute):
+    """Catch-all route that ignores paths owned by the API and docs.
+
+    Returning ``Match.NONE`` lets Starlette keep its native behaviour for
+    reserved prefixes: a known path with the wrong method still returns 405,
+    and an unknown API route returns the usual JSON 404.
+    """
+
+    def matches(self, scope: Scope) -> tuple[Match, Scope]:
+        if scope["type"] == "http" and _is_reserved_path(scope.get("path", "")):
+            return Match.NONE, {}
+        return super().matches(scope)
+
+
+def _register_spa(application: FastAPI, static_root: Path) -> None:
+    """Serve the built Angular app and fall back to index.html for deep links."""
+
+    index_file = static_root / "index.html"
+
+    def spa_fallback(full_path: str) -> FileResponse:
+        try:
+            candidate = (static_root / full_path.strip("/")).resolve()
+        except (OSError, ValueError, RuntimeError) as exc:
+            logger.debug("Rejected static path %r: %s", full_path, exc)
+            raise HTTPException(status_code=404) from exc
+
+        if candidate.is_file() and candidate.is_relative_to(static_root):
+            return FileResponse(
+                candidate,
+                headers={"Cache-Control": _static_cache_control(candidate)},
+            )
+        return FileResponse(index_file, headers={"Cache-Control": "no-cache"})
+
+    application.router.routes.append(
+        _SpaRoute(
+            "/{full_path:path}",
+            endpoint=spa_fallback,
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
+    )
 
 
 def _prepare_directories(settings: Settings) -> None:
@@ -67,8 +143,12 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         engine.dispose()
 
 
-def create_app() -> FastAPI:
-    """Create and configure the FastAPI application."""
+def create_app(*, dist_dir: Path | None = None) -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    ``dist_dir`` overrides the built frontend directory; it exists for tests
+    and deployments that keep the build outside the repository root.
+    """
 
     settings = get_settings()
     application = FastAPI(
@@ -116,6 +196,13 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(application)
     application.include_router(api_router, prefix="/api")
+
+    static_root = (dist_dir if dist_dir is not None else DIST_DIR).resolve()
+    if (static_root / "index.html").is_file():
+        _register_spa(application, static_root)
+    else:
+        logger.debug("SPA build not found at %s; static serving is disabled", static_root)
+
     return application
 
 

@@ -16,7 +16,7 @@
 | 3 | Income | [x] | [x] |
 | 4 | Settings/system | [x] | [x] |
 | 5 | UX polish, responsive, a11y, ru-RU, E2E | [x] | [x] |
-| 6 | Production integration, final tests, docs | [ ] | [ ] |
+| 6 | Production integration, final tests, docs | [x] | [x] |
 
 ## 1. Цель и границы
 
@@ -965,28 +965,28 @@ frontend/src/app/features/**
 
 ---
 
-### [ ] Этап 6. Production integration, final tests, docs
+### [x] Этап 6. Production integration, final tests, docs
 
 **Цель:** одной командой запускается production-приложение: FastAPI отдаёт API и собранный Angular, deep links работают.
 
 **Deliverables**
 
-- [ ] `ng build` production → repo-root `dist/browser/index.html` (`D:\Work\ai test\dist\browser`); в `angular.json` задать `"outputPath": { "base": "../dist" }` (по умолчанию Angular 20 кладёт сборку в `frontend/dist/<project>/browser`).
-- [ ] Проверить размеры бандлов; при необходимости поднять budget или разделить чанки.
-- [ ] FastAPI static serving + SPA fallback (см. §7.2), без изменений API-контракта.
-- [ ] Проверить порядок routes: API/docs/openapi не перехватываются SPA.
-- [ ] `start.ps1` в корне: миграции, сборка при необходимости, запуск.
-- [ ] `.gitignore`: `frontend/node_modules`, `dist`, `.angular`, локальные env-файлы.
-- [ ] `frontend/README.md`: запуск, тесты, генерация типов, production.
-- [ ] Обновить `docs/FRONTEND_PLAN.md`: отметить этапы, добавить review findings.
-- [ ] Обновить `docs/FRONTEND_HANDOFF.md`, если фактический контракт/команды уточнились.
-- [ ] Финальный прогон:
-  - [ ] `npm ci`;
-  - [ ] `npm run build`;
-  - [ ] `npm test -- --watch=false --browsers=ChromeHeadless`;
-  - [ ] backend `pytest` (не менять тесты);
-  - [ ] contract smoke: health, positions, dashboard, income, settings, backup, export.
-- [ ] Финальное ревью по skill `code-review-and-quality`.
+- [x] `ng build` production → repo-root `dist/browser/index.html` (`D:\Work\ai test\dist\browser`); в `angular.json` задать `"outputPath": { "base": "../dist" }` (по умолчанию Angular 20 кладёт сборку в `frontend/dist/<project>/browser`).
+- [x] Проверить размеры бандлов; при необходимости поднять budget или разделить чанки.
+- [x] FastAPI static serving + SPA fallback (см. §7.2), без изменений API-контракта.
+- [x] Проверить порядок routes: API/docs/openapi не перехватываются SPA.
+- [x] `start.ps1` в корне: миграции, сборка при необходимости, запуск.
+- [x] `.gitignore`: `frontend/node_modules`, `dist`, `.angular`, локальные env-файлы.
+- [x] `frontend/README.md`: запуск, тесты, генерация типов, production.
+- [x] Обновить `docs/FRONTEND_PLAN.md`: отметить этапы, добавить review findings.
+- [x] Обновить `docs/FRONTEND_HANDOFF.md`, если фактический контракт/команды уточнились.
+- [x] Финальный прогон:
+  - [x] `npm ci`;
+  - [x] `npm run build`;
+  - [x] `npm test -- --watch=false --browsers=ChromeHeadless`;
+  - [x] backend `pytest` (не менять тесты);
+  - [x] contract smoke: health, positions, dashboard, income, settings, backup, export.
+- [x] Финальное ревью по skill `code-review-and-quality`.
 
 **Files/areas**
 
@@ -1004,34 +1004,34 @@ docs/FRONTEND_HANDOFF.md
 
 **Acceptance criteria**
 
-- [ ] `.\start.ps1` поднимает приложение на `http://127.0.0.1:8000`.
-- [ ] `/` и `/dashboard` отдают SPA.
-- [ ] `/assets/1` (deep link) отдаёт SPA, не 404.
-- [ ] `/api/health` отдаёт JSON.
-- [ ] `/docs` и `/openapi.json` работают.
-- [ ] Скачивание JSON/CSV работает в production (same origin).
-- [ ] `npm ci && npm run build && npm test -- --watch=false --browsers=ChromeHeadless` проходят с чистой установки (Angular 20.3.34, CLI/build 20.3.42, Karma + Jasmine через `@angular/build:karma`).
-- [ ] Нет CORS-ошибок в production.
-- [ ] README описывает запуск, сборку, тесты, seed, troubleshooting.
+- [x] `.\start.ps1` поднимает приложение на `http://127.0.0.1:8000`.
+- [x] `/` и `/dashboard` отдают SPA.
+- [x] `/assets/1` (deep link) отдаёт SPA, не 404.
+- [x] `/api/health` отдаёт JSON.
+- [x] `/docs` и `/openapi.json` работают.
+- [x] Скачивание JSON/CSV работает в production (same origin).
+- [x] `npm ci && npm run build && npm test -- --watch=false --browsers=ChromeHeadless` проходят с чистой установки (Angular 20.3.34, CLI/build 20.3.42, Karma + Jasmine через `@angular/build:karma`).
+- [x] Нет CORS-ошибок в production.
+- [x] README описывает запуск, сборку, тесты, seed, troubleshooting.
 
 **Tests**
 
-- [ ] `npm ci` с нуля.
-- [ ] `npm run build`.
-- [ ] `npm test -- --watch=false --browsers=ChromeHeadless`.
-- [ ] Backend pytest (регресс).
-- [ ] Contract smoke через `curl`/`Invoke-RestMethod`.
-- [ ] Ручной smoke production: dashboard, portfolio, asset detail, income, settings, downloads, deep link, reload.
+- [x] `npm ci` с нуля.
+- [x] `npm run build`.
+- [x] `npm test -- --watch=false --browsers=ChromeHeadless`.
+- [x] Backend pytest (регресс).
+- [x] Contract smoke через `curl`/`Invoke-RestMethod`.
+- [x] Ручной smoke production: dashboard, portfolio, asset detail, income, settings, downloads, deep link, reload.
 
 **Review checkpoint**
 
-- [ ] Ревью production routing: API/docs не сломаны.
-- [ ] Ревью static cache: hashed assets vs index.html.
-- [ ] Ревью `start.ps1`: uv fallback, ошибки, повторный запуск.
-- [ ] Ревью DoD и документации.
-- [ ] Финальный verdict.
+- [x] Ревью production routing: API/docs не сломаны.
+- [x] Ревью static cache: hashed assets vs index.html.
+- [x] Ревью `start.ps1`: uv fallback, ошибки, повторный запуск.
+- [x] Ревью DoD и документации.
+- [x] Финальный verdict.
 
-**Review findings / status:** _не заполнено; заполняется после ревью._
+**Review findings / status:** **PASS после исправлений** — 2026-11-02, ревью по skill `code-review-and-quality`. Исправлено: **R1** — `GET /%00` больше не даёт 500, а возвращает 404 JSON `NOT_FOUND`; **R2** — `immutable` выдаётся только для content-hashed assets (Angular `-XXXXXXXX.ext`), `favicon.ico`/public-файлы — `max-age=3600`, `index.html` — `no-cache`; **R3** — README приведён к фактам: `npm audit --omit=dev` — 0, полный audit — 24 moderate в dev-инструментах (high/critical 0), PrimeNG 20.x/21.x — MIT, 22+ — коммерческая; **O1** — поддержан `HEAD` для SPA/static; **O2** — `start.ps1` открывает браузер после health-poll и корректно читает `ExitCode` на PowerShell 5.1. Проверки: **497 backend pytest**, **256 Karma**, чистый `npm ci`, build в repo-root `dist/browser`; static/contract smoke: `/`, `/dashboard`, `/assets/1` — SPA, `/api/health`, `/docs`, `/openapi.json`, hashed cache `immutable`, favicon `3600`, index `no-cache`, deep-link reload; downloads JSON/CSV ZIP с `Content-Disposition`; production smoke через `start.ps1` на 8000 с temp DB; headless UI всех 5 экранов, console/CORS/NG0100 — 0; live 8000/4200 восстановлены. Live-БД: логическое содержимое не изменилось (SQL dump hash совпал), физический файл перезаписан WAL checkpoint/startup refresh — ожидаемо. Остаточные: 24 moderate audit в dev-зависимостях (high/critical 0), нет корневого README, Pester для `start.ps1` не добавлен, PS7 не проверялся, startup refresh пишет котировки при рестарте.
 
 ## 9. Тестовая стратегия
 
@@ -1142,6 +1142,7 @@ docs/FRONTEND_HANDOFF.md
 | 2026-11-01 | backend | Исправлен MOEX ISS: `/securities/{secid}.json` теперь `description`+`boards`; LOTSIZE из board-endpoint, INITIALFACEVALUE/FACEVALUE и amortdate; live add/delete GAZP проверены, 478 backend tests | — |
 | 2026-11-02 | 4 | Этап 4 завершён и прошёл ревью (PASS после исправлений): health/refresh, настройки с revert 400, backup, экспорт JSON/CSV; 231 Karma-тест, build, live read-only /settings, backup/export | — |
 | 2026-11-02 | 5 | Этап 5 завершён и прошёл ревью (PASS после исправлений): responsive 360/768/1280, skip-link, focus trap/return, доступные имена таблиц/графика, ru-RU, E2E на изолированной БД; исправлен reset p-select в форме дохода; 256 Karma-тестов, build | — |
+| 2026-11-02 | 6 | Этап 6 завершён и прошёл ревью (PASS после исправлений): production build, FastAPI static/SPA fallback, cache policy, start.ps1, README/gitignore; 497 backend + 256 frontend тестов, contract/production smoke, deep links/downloads | — |
 
 ### 12.2. Результаты ревью
 
@@ -1155,7 +1156,7 @@ docs/FRONTEND_HANDOFF.md
 | 3 | 2026-11-01 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O4 + N1/N2/N4 закрыты; live read-only /income; данные live-БД разошлись с seed из-за MOEX-синхронизации | [x] |
 | 4 | 2026-11-02 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O3/O5 + Nit закрыты; live read-only health/settings/backup/export; refresh/409/400 покрыты unit-тестами | [x] |
 | 5 | 2026-11-02 | PASS после исправлений | 0 Critical/Required после фиксов; R1–R3 + O1/N1 закрыты, E2E-дефект p-select reset исправлен; 256 тестов, build, live 360/768/1280, Tab/Shift+Tab/Esc; screen reader/validator отложены | [x] |
-| 6 | — | — | — | [ ] |
+| 6 | 2026-11-02 | PASS после исправлений | 0 Critical/Required после фиксов; R1–R3/O1/O2 + start.ps1 exit code закрыты; production smoke on 8000, contract/downloads/deep links, live DB logical content unchanged; 24 moderate dev audit остаётся | [x] |
 
 ### 12.3. Шаблон записи ревью
 
