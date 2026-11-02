@@ -5,7 +5,7 @@ import {
   model,
   output,
 } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter, Router } from '@angular/router';
 import Aura from '@primeuix/themes/aura';
@@ -288,6 +288,30 @@ describe('AssetDetailPage', () => {
     expect(normalize(fixture.nativeElement.textContent)).toContain('Нет открытой позиции');
   });
 
+  it('gives every table an accessible name', () => {
+    const fixture = create();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(
+      Array.from(element.querySelectorAll('table')).map((table) =>
+        table.getAttribute('aria-labelledby'),
+      ),
+    ).toEqual([
+      'asset-operations-title',
+      'asset-paid-incomes-title',
+      'asset-expected-incomes-title',
+      'asset-quotes-title',
+    ]);
+  });
+
+  it('shows an empty state when the asset is missing', () => {
+    const fixture = TestBed.createComponent(AssetDetailPage);
+    fixture.componentRef.setInput('assetId', '');
+    fixture.detectChanges();
+
+    expect(normalize(fixture.nativeElement.textContent)).toContain('Актив не найден');
+  });
+
   it('shows an error state and retries the initial load', () => {
     assets.get.and.returnValues(
       throwError(() => new ApiError(404, 'ASSET_NOT_FOUND', 'Актив 1 не найден')),
@@ -344,26 +368,38 @@ describe('AssetDetailPage', () => {
       message: string;
       accept: () => void;
     };
-    expect(options.message).toContain('backend отклонит операцию');
+    expect(options.message).toContain('сервер отклонит операцию');
 
     options.accept();
 
     expect(operations.remove).toHaveBeenCalledWith(1);
     expect(notifications.success).toHaveBeenCalledWith('Операция удалена');
+    expect(document.activeElement).toBe(
+      fixture.nativeElement.querySelector('#asset-operations-title'),
+    );
   });
 
-  it('confirms asset deletion and navigates back to the portfolio', () => {
+  it('confirms asset deletion, navigates back and focuses main', fakeAsync(() => {
     const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+    const main = document.createElement('main');
+    main.id = 'main-content';
+    main.tabIndex = -1;
+    document.body.appendChild(main);
+
     const fixture = create();
     const component = fixture.componentInstance;
 
     component.confirmDeleteAsset();
     const options = confirmation.confirm.calls.mostRecent().args[0] as { accept: () => void };
     options.accept();
+    tick();
 
     expect(assets.remove).toHaveBeenCalledWith(1);
     expect(navigate).toHaveBeenCalledWith(['/portfolio']);
-  });
+    expect(document.activeElement).toBe(main);
+
+    main.remove();
+  }));
 
   it('keeps the asset and shows a toast when deletion is blocked by 409', () => {
     assets.remove.and.returnValue(

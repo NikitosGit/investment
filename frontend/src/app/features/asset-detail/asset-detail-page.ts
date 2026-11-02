@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
+  ViewChild,
   computed,
   effect,
   inject,
@@ -33,6 +35,7 @@ import { toPriceSource } from '../../core/api/models';
 import { DatePipe } from '../../core/formatting/date.pipe';
 import {
   assetTypeLabel,
+  currencyLabel,
   dataSourceLabel,
   incomeKindLabel,
   operationTypeLabel,
@@ -47,6 +50,7 @@ import { OperationsService } from '../../core/services/operations.service';
 import { PositionsService } from '../../core/services/positions.service';
 import { QuotesService } from '../../core/services/quotes.service';
 import { ErrorStateComponent } from '../../shared/ui/error-state/error-state.component';
+import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
 import { LoadingSkeletonComponent } from '../../shared/ui/loading-skeleton/loading-skeleton.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { PriceSourceBadgeComponent } from '../../shared/ui/price-source-badge/price-source-badge.component';
@@ -74,6 +78,7 @@ import { OperationDialogComponent } from './operation-dialog/operation-dialog.co
     StatCardComponent,
     PriceSourceBadgeComponent,
     ErrorStateComponent,
+    EmptyStateComponent,
     LoadingSkeletonComponent,
     OperationDialogComponent,
   ],
@@ -94,6 +99,9 @@ export class AssetDetailPage {
   private readonly destroyRef = inject(DestroyRef);
   private readonly moneyPipe = inject(MoneyPipe);
   private readonly pricePipe = inject(PricePipe);
+
+  @ViewChild('operationsTitle')
+  private readonly operationsTitle?: ElementRef<HTMLElement>;
 
   /** Bound from the `assets/:assetId` route via `withComponentInputBinding()`. */
   readonly assetId = input<string>();
@@ -165,6 +173,7 @@ export class AssetDetailPage {
   });
 
   readonly assetTypeLabel = assetTypeLabel;
+  readonly currencyLabel = currencyLabel;
   readonly operationTypeLabel = operationTypeLabel;
   readonly incomeKindLabel = incomeKindLabel;
   readonly dataSourceLabel = dataSourceLabel;
@@ -226,7 +235,7 @@ export class AssetDetailPage {
     this.confirmation.confirm({
       header: 'Удаление операции',
       message:
-        'Удалить операцию? Если после удаления история станет некорректной, backend отклонит операцию.',
+        'Удалить операцию? Если после удаления история станет некорректной, сервер отклонит операцию.',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Удалить',
       rejectLabel: 'Отмена',
@@ -419,6 +428,7 @@ export class AssetDetailPage {
       .subscribe({
         next: () => {
           this.notifications.success('Операция удалена');
+          this.operationsTitle?.nativeElement.focus();
           this.reloadDetails();
         },
         error: (error: unknown) => {
@@ -440,7 +450,9 @@ export class AssetDetailPage {
         next: () => {
           this.notifications.success('Актив удалён');
           if (this.numericId() === assetId) {
-            void this.router.navigate(['/portfolio']);
+            void this.router.navigate(['/portfolio']).then(() => {
+              document.getElementById('main-content')?.focus();
+            });
           }
         },
         error: (error: unknown) => {

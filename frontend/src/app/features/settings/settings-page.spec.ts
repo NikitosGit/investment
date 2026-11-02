@@ -57,7 +57,7 @@ const BACKUP: BackupResponse = {
   created_at: '2026-10-30T18:10:12.870080+03:00',
 };
 
-const NETWORK_ERROR = new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend');
+const NETWORK_ERROR = new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером');
 const MASTER_SWITCH_ERROR = new ApiError(
   400,
   'BAD_REQUEST',
@@ -164,7 +164,7 @@ describe('SettingsPage', () => {
     const element = fixture.nativeElement as HTMLElement;
 
     expect(element.querySelectorAll('app-error-state').length).toBe(1);
-    expect(textOf(element)).toContain('Нет связи с backend');
+    expect(textOf(element)).toContain('Нет связи с сервером');
     expect(textOf(element)).toContain('Автоматическое обновление котировок');
 
     health.get.and.returnValue(of(HEALTH));
@@ -409,11 +409,11 @@ describe('SettingsPage', () => {
 
     const content = textOf(element);
     expect(content).toContain('Резервная копия не создана');
-    expect(content).toContain('Нет связи с backend');
+    expect(content).toContain('Нет связи с сервером');
 
     const backupButton = Array.from(
       element.querySelectorAll<HTMLButtonElement>('p-button button'),
-    ).find((button) => button.textContent?.includes('Создать backup'));
+    ).find((button) => button.textContent?.includes('Создать резервную копию'));
     expect(backupButton?.disabled).toBeFalse();
 
     system.createBackup.and.returnValue(of(BACKUP));
@@ -453,7 +453,7 @@ describe('SettingsPage', () => {
     expect(textOf(element)).toContain('Создаём резервную копию');
     const backupButton = Array.from(
       element.querySelectorAll<HTMLButtonElement>('p-button button'),
-    ).find((button) => button.textContent?.includes('Создать backup'));
+    ).find((button) => button.textContent?.includes('Создать резервную копию'));
     expect(backupButton?.disabled).toBeTrue();
 
     backupSubject.next(BACKUP);

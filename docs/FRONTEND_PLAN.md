@@ -15,7 +15,7 @@
 | 2 | Portfolio + asset search/add + asset detail + operations CRUD | [x] | [x] |
 | 3 | Income | [x] | [x] |
 | 4 | Settings/system | [x] | [x] |
-| 5 | UX polish, responsive, a11y, ru-RU, E2E | [ ] | [ ] |
+| 5 | UX polish, responsive, a11y, ru-RU, E2E | [x] | [x] |
 | 6 | Production integration, final tests, docs | [ ] | [ ] |
 
 ## 1. Цель и границы
@@ -899,32 +899,32 @@ frontend/src/app/core/services/system.service.ts
 
 ---
 
-### [ ] Этап 5. UX polish, responsive, accessibility, ru-RU, E2E
+### [x] Этап 5. UX polish, responsive, accessibility, ru-RU, E2E
 
 **Цель:** приложение удобно на телефоне и десктопе, доступно с клавиатуры, полностью на русском, со всеми состояниями.
 
 **Deliverables**
 
-- [ ] Адаптивность: 360px, 768px, 1280px+; sidebar → мобильное меню/навигация; таблицы скроллятся/переносятся.
-- [ ] Карточки дашборда в сетке; график не ломает layout; длинные тикеры не переполняют.
-- [ ] Все формы: labels, `aria-describedby`, inline errors, focus на первом невалидном поле.
-- [ ] Диалоги: focus trap, Esc, возврат фокуса, `aria-modal`.
-- [ ] Таблицы: caption/aria-label, сортировка доступна с клавиатуры.
-- [ ] Контраст текста/бейджей; не полагаться только на цвет для stale/overdue.
-- [ ] Русская локаль PrimeNG (datepicker, table, confirm) и `LOCALE_ID='ru-RU'`.
-- [ ] Единые форматы денег/процентов/дат; склонения «купон/купона/купонов» (если нужно).
-- [ ] Empty/error/loading на всех экранах; retry.
-- [ ] Тосты и подтверждения не перекрывают контент на мобильном.
-- [ ] Ручной E2E-сценарий:
-  - [ ] seed;
-  - [ ] дашборд — сверить суммы;
-  - [ ] портфель — фильтр, карточка SBER/ОФЗ;
-  - [ ] операция BUY/SELL, oversell 409;
-  - [ ] доходы — mark-paid, ручной дивиденд;
-  - [ ] настройки — refresh (если сеть), backup, экспорт;
-  - [ ] перезагрузка страницы — данные сохранились.
-- [ ] Проверка консоли: нет ошибок, нет NG0100/ExpressionChanged.
-- [ ] Проверка клавиатуры: Tab/Shift+Tab, Enter, Esc.
+- [x] Адаптивность: 360px, 768px, 1280px+; sidebar → мобильное меню/навигация; таблицы скроллятся/переносятся.
+- [x] Карточки дашборда в сетке; график не ломает layout; длинные тикеры не переполняют.
+- [x] Все формы: labels, `aria-describedby`, inline errors, focus на первом невалидном поле.
+- [x] Диалоги: focus trap, Esc, возврат фокуса, `aria-modal`.
+- [x] Таблицы: caption/aria-label, сортировка доступна с клавиатуры.
+- [x] Контраст текста/бейджей; не полагаться только на цвет для stale/overdue.
+- [x] Русская локаль PrimeNG (datepicker, table, confirm) и `LOCALE_ID='ru-RU'`.
+- [x] Единые форматы денег/процентов/дат; склонения «купон/купона/купонов» (если нужно).
+- [x] Empty/error/loading на всех экранах; retry.
+- [x] Тосты и подтверждения не перекрывают контент на мобильном.
+- [x] Ручной E2E-сценарий:
+  - [x] seed;
+  - [x] дашборд — сверить суммы;
+  - [x] портфель — фильтр, карточка SBER/ОФЗ;
+  - [x] операция BUY/SELL, oversell 409;
+  - [x] доходы — mark-paid, ручной дивиденд;
+  - [x] настройки — refresh (если сеть), backup, экспорт;
+  - [x] перезагрузка страницы — данные сохранились.
+- [x] Проверка консоли: нет ошибок, нет NG0100/ExpressionChanged.
+- [x] Проверка клавиатуры: Tab/Shift+Tab, Enter, Esc.
 
 **Files/areas**
 
@@ -939,29 +939,29 @@ frontend/src/app/features/**
 
 **Acceptance criteria**
 
-- [ ] Нет горизонтального скролла на 360px, кроме таблиц с явным scroll.
-- [ ] Все интерактивные элементы доступны с клавиатуры.
-- [ ] Все пользовательские тексты на русском.
-- [ ] Все состояния (loading/empty/error/partial/stale/overdue) видны и понятны.
-- [ ] Ручной E2E-сценарий проходит на seed.
-- [ ] `npm run build` и `npm test -- --watch=false --browsers=ChromeHeadless` зелёные.
+- [x] Нет горизонтального скролла на 360px, кроме таблиц с явным scroll.
+- [x] Все интерактивные элементы доступны с клавиатуры.
+- [x] Все пользовательские тексты на русском.
+- [x] Все состояния (loading/empty/error/partial/stale/overdue) видны и понятны.
+- [x] Ручной E2E-сценарий проходит на seed.
+- [x] `npm run build` и `npm test -- --watch=false --browsers=ChromeHeadless` зелёные.
 
 **Tests**
 
-- [ ] Component: состояния loading/empty/error для ключевых экранов.
-- [ ] Component: клавиатурный сценарий диалога (Esc/focus).
-- [ ] Unit: локальные форматтеры/склонения.
-- [ ] Ручной E2E по чек-листу выше.
-- [ ] Опционально: Playwright smoke — позже, не блокер MVP.
+- [x] Component: состояния loading/empty/error для ключевых экранов.
+- [x] Component: клавиатурный сценарий диалога (Esc/focus).
+- [x] Unit: локальные форматтеры/склонения.
+- [x] Ручной E2E по чек-листу выше.
+- [x] Опционально: Playwright smoke — позже, не блокер MVP.
 
 **Review checkpoint**
 
-- [ ] Ревью a11y: labels, focus, contrast, keyboard.
-- [ ] Ревью responsive: 360/768/1280.
-- [ ] Ревью локали: все строки, форматы, PrimeNG locale.
-- [ ] Ревью состояний: нет «пустого экрана» без explanation.
+- [x] Ревью a11y: labels, focus, contrast, keyboard.
+- [x] Ревью responsive: 360/768/1280.
+- [x] Ревью локали: все строки, форматы, PrimeNG locale.
+- [x] Ревью состояний: нет «пустого экрана» без explanation.
 
-**Review findings / status:** _не заполнено; заполняется после ревью._
+**Review findings / status:** **PASS после исправлений** — 2026-11-02, ревью по skill `code-review-and-quality`. Исправлено: skip-link с `preventDefault()` и фокусом на `main`; возврат фокуса после мобильной навигации и удаления операции/актива; усилены focus-тесты (мутация `restoreFocus → no-op` снова red); `aria-controls` мобильного меню только при открытом состоянии; `FIELD_IDS` только для фокусируемых полей; все таблицы получили доступные имена; график — `aria-label`; `aria-invalid`/`aria-describedby`; фокус первого невалидного поля; focus trap/Esc/return focus; skip-link; toast offset; русские статусы («Сервер», «руб.»); empty state карточки актива. E2E на изолированной БД: seed/dashboard/portfolio/карточки/операции BUY+delete/oversell 409/доходы mark-paid/настройки refresh+period+backup+export/reload persistence — **PASS**; найден и исправлен баг: `p-select` в форме ручного дохода сбрасывал форму из-за effect `resetForm()` на каждом re-run; добавлены guard/`untracked` и regression-тесты, live create/delete дохода проверены. Проверки: **256 Karma-тестов**, `npm run build`; live 360/768/1280 без page horizontal scroll, console 0 errors/NG0100; Tab/Shift+Tab/Esc в диалоге и mobile menu, skip-link, focus trap. Отложено/не проверено: реальные скринридеры, W3C validator, Firefox/Safari, инструментальный contrast; pre-existing `aria-controls` неактивной вкладки `/income` — Optional; Playwright не добавлялся (не блокер MVP).
 
 ---
 
@@ -1141,6 +1141,7 @@ docs/FRONTEND_HANDOFF.md
 | 2026-11-01 | 3 | Этап 3 завершён и прошёл ревью (PASS после исправлений): доходы PAID/EXPECTED, серверные фильтры, портфельные totals, ручной доход, edit PAID/EXPECTED, mark-paid + 409, delete confirm; 207 Karma-тестов, build, live /income | — |
 | 2026-11-01 | backend | Исправлен MOEX ISS: `/securities/{secid}.json` теперь `description`+`boards`; LOTSIZE из board-endpoint, INITIALFACEVALUE/FACEVALUE и amortdate; live add/delete GAZP проверены, 478 backend tests | — |
 | 2026-11-02 | 4 | Этап 4 завершён и прошёл ревью (PASS после исправлений): health/refresh, настройки с revert 400, backup, экспорт JSON/CSV; 231 Karma-тест, build, live read-only /settings, backup/export | — |
+| 2026-11-02 | 5 | Этап 5 завершён и прошёл ревью (PASS после исправлений): responsive 360/768/1280, skip-link, focus trap/return, доступные имена таблиц/графика, ru-RU, E2E на изолированной БД; исправлен reset p-select в форме дохода; 256 Karma-тестов, build | — |
 
 ### 12.2. Результаты ревью
 
@@ -1153,7 +1154,7 @@ docs/FRONTEND_HANDOFF.md
 | 2 | 2026-11-01 | PASS после исправлений | 0 Critical; R1–R9 исправлены (shared-таблица, отмена поиска, secid+board, stale guards, datepicker, trim цены, ariaLabel, ширина таблиц, empty state); backend MOEX ISS fix выполнен и live-проверен; ОФЗ TQOB — отдельное ограничение MVP | [x] |
 | 3 | 2026-11-01 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O4 + N1/N2/N4 закрыты; live read-only /income; данные live-БД разошлись с seed из-за MOEX-синхронизации | [x] |
 | 4 | 2026-11-02 | PASS после исправлений | 0 Critical/Required после фиксов; R1 + O1–O3/O5 + Nit закрыты; live read-only health/settings/backup/export; refresh/409/400 покрыты unit-тестами | [x] |
-| 5 | — | — | — | [ ] |
+| 5 | 2026-11-02 | PASS после исправлений | 0 Critical/Required после фиксов; R1–R3 + O1/N1 закрыты, E2E-дефект p-select reset исправлен; 256 тестов, build, live 360/768/1280, Tab/Shift+Tab/Esc; screen reader/validator отложены | [x] |
 | 6 | — | — | — | [ ] |
 
 ### 12.3. Шаблон записи ревью

@@ -55,3 +55,8 @@ export function incomeStatusLabel(value: IncomeStatus): string {
 export function dataSourceLabel(value: DataSource): string {
   return DATA_SOURCE_LABELS[value];
 }
+
+/** Display label for the ISO currency code returned by the API. */
+export function currencyLabel(value: string): string {
+  return value === 'RUB' ? 'руб.' : value;
+}

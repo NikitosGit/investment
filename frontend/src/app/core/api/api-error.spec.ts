@@ -48,7 +48,7 @@ describe('ApiError mapping', () => {
 
     expect(error.status).toBe(0);
     expect(error.code).toBe('NETWORK_ERROR');
-    expect(error.message).toBe('Нет связи с backend');
+    expect(error.message).toBe('Нет связи с сервером');
   });
 
   it('maps an unknown non-JSON body to a generic error', () => {

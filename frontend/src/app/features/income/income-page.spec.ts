@@ -298,7 +298,7 @@ describe('IncomePage', () => {
   it('shows an error state instead of stale rows when a filter request fails', () => {
     incomes.list.and.returnValues(
       of(PAID_RESPONSE),
-      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend')),
+      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером')),
       of(PAID_RESPONSE),
     );
 
@@ -312,7 +312,7 @@ describe('IncomePage', () => {
 
     expect(element.querySelector('app-error-state')).toBeTruthy();
     expect(element.querySelector('p-table')).toBeNull();
-    expect(normalize(element.textContent ?? '')).toContain('Нет связи с backend');
+    expect(normalize(element.textContent ?? '')).toContain('Нет связи с сервером');
 
     component.retry();
     fixture.detectChanges();
@@ -325,7 +325,7 @@ describe('IncomePage', () => {
 
   it('warns once when the asset filter cannot load across retries', () => {
     assets.list.and.returnValue(
-      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend')),
+      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером')),
     );
 
     const fixture = create();
@@ -397,14 +397,14 @@ describe('IncomePage', () => {
 
   it('shows an error state and retries', () => {
     incomes.list.and.returnValues(
-      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend')),
+      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером')),
       of(PAID_RESPONSE),
     );
 
     const fixture = create();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(normalize(element.textContent ?? '')).toContain('Нет связи с backend');
+    expect(normalize(element.textContent ?? '')).toContain('Нет связи с сервером');
 
     element.querySelector<HTMLButtonElement>('app-error-state button')?.click();
     fixture.detectChanges();

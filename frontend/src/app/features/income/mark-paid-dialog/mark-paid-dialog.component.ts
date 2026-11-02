@@ -9,6 +9,7 @@ import {
   model,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -30,6 +31,12 @@ import {
 } from '../../../core/formatting/validators';
 import { IncomeService } from '../../../core/services/income.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AriaDescribedByDirective } from '../../../shared/a11y/aria-described-by.directive';
+import {
+  focusFirstInvalidField,
+  rememberActiveElement,
+  restoreFocus,
+} from '../../../shared/a11y/focus';
 import { applyServerFieldErrors } from '../../../shared/forms/server-field-errors';
 
 /** Confirmation dialog for an expected coupon (`POST /income/{id}/mark-paid`). */
@@ -44,6 +51,7 @@ import { applyServerFieldErrors } from '../../../shared/forms/server-field-error
     InputTextModule,
     MessageModule,
     MoneyPipe,
+    AriaDescribedByDirective,
   ],
   templateUrl: './mark-paid-dialog.component.html',
   styleUrl: './mark-paid-dialog.component.scss',
@@ -68,6 +76,9 @@ export class MarkPaidDialogComponent {
   readonly saving = signal(false);
   readonly serverError = signal<string | null>(null);
 
+  private returnFocusTo: HTMLElement | null = null;
+  private isOpen = false;
+
   readonly isExpected = computed(() => this.income()?.status === 'EXPECTED');
   readonly kindLabel = computed(() => {
     const income = this.income();
@@ -76,9 +87,21 @@ export class MarkPaidDialogComponent {
 
   constructor() {
     effect(() => {
-      if (this.visible()) {
-        this.resetForm();
+      const isVisible = this.visible();
+      if (isVisible === this.isOpen) {
+        return;
       }
+      this.isOpen = isVisible;
+
+      untracked(() => {
+        if (isVisible) {
+          this.returnFocusTo = rememberActiveElement();
+          this.resetForm();
+        } else {
+          restoreFocus(this.returnFocusTo);
+          this.returnFocusTo = null;
+        }
+      });
     });
 
     this.form.valueChanges
@@ -107,7 +130,12 @@ export class MarkPaidDialogComponent {
   submit(): void {
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid) {
+      focusFirstInvalidField(this.form, { amount_total: 'mark-paid-amount' });
+      return;
+    }
+
+    if (this.saving()) {
       return;
     }
 

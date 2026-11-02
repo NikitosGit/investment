@@ -9,7 +9,7 @@
       <div>
         <h2 id="settings-health-title">Состояние системы</h2>
         <p class="settings__hint">
-          Проверка API, базы данных и последнего обновления котировок.
+          Проверка сервера, базы данных и последнего обновления котировок.
         </p>
       </div>
 
@@ -32,7 +32,7 @@
       />
     } @else if (health(); as healthData) {
       <dl class="settings__defs">
-        <dt>Статус API</dt>
+        <dt>Статус сервера</dt>
         <dd>
           <p-tag
             [value]="healthStatusLabel(healthData.status)"
@@ -141,6 +141,7 @@
             (ngModelChange)="onQuoteRefreshChange($event)"
             [disabled]="saving()"
             [ariaLabelledBy]="'quote-refresh-label'"
+            [pt]="{ input: { 'aria-describedby': 'quote-refresh-help' } }"
           />
         </div>
 
@@ -157,6 +158,7 @@
             (ngModelChange)="onDashboardPeriodChange($event)"
             [disabled]="saving()"
             [ariaLabelledBy]="'dashboard-period-label'"
+            [pt]="{ label: { 'aria-describedby': 'dashboard-period-help' } }"
           />
           <p class="settings__helper" id="dashboard-period-help">
             Этот период используется дашбордом по умолчанию, если период не выбран явно.
@@ -187,12 +189,12 @@
         <h3 id="settings-backup-title">Резервная копия</h3>
         <p class="settings__helper">
           Копия SQLite-базы создаётся на сервере и не скачивается по HTTP. Забрать файл можно
-          напрямую с машины, где работает backend.
+          напрямую с машины, где работает сервер.
         </p>
 
         <div class="settings__actions">
           <p-button
-            label="Создать backup"
+            label="Создать резервную копию"
             icon="pi pi-database"
             [loading]="backupLoading()"
             [disabled]="backupLoading()"
@@ -204,7 +206,7 @@
           @if (backupLoading()) {
             <p class="settings__muted">Создаём резервную копию…</p>
           } @else if (backupError()) {
-            <p class="settings__error-text" role="alert">
+            <p class="settings__error-text">
               Резервная копия не создана: {{ backupErrorMessage() }}. Можно повторить попытку.
             </p>
           } @else if (backup(); as backupData) {

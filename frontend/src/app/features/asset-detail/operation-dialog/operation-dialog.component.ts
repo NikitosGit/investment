@@ -9,6 +9,7 @@ import {
   model,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -39,6 +40,12 @@ import {
 } from '../../../core/formatting/validators';
 import { NotificationService } from '../../../core/services/notification.service';
 import { OperationsService } from '../../../core/services/operations.service';
+import { AriaDescribedByDirective } from '../../../shared/a11y/aria-described-by.directive';
+import {
+  focusFirstInvalidField,
+  rememberActiveElement,
+  restoreFocus,
+} from '../../../shared/a11y/focus';
 import { applyServerFieldErrors } from '../../../shared/forms/server-field-errors';
 import type { SelectOption } from '../../../shared/ui/select-option';
 
@@ -52,6 +59,13 @@ interface OperationSnapshot {
 }
 
 type OperationField = 'type' | 'trade_date' | 'quantity' | 'price' | 'price_type' | 'note';
+
+const FIELD_IDS: Readonly<Partial<Record<OperationField, string>>> = {
+  trade_date: 'operation-trade-date',
+  quantity: 'operation-quantity',
+  price: 'operation-price',
+  note: 'operation-note',
+};
 
 const REQUIRED_MESSAGES: Partial<Record<OperationField, string>> = {
   trade_date: 'Укажите дату сделки.',
@@ -73,6 +87,7 @@ const REQUIRED_MESSAGES: Partial<Record<OperationField, string>> = {
     SelectButtonModule,
     TextareaModule,
     MoneyPipe,
+    AriaDescribedByDirective,
   ],
   templateUrl: './operation-dialog.component.html',
   styleUrl: './operation-dialog.component.scss',
@@ -123,6 +138,8 @@ export class OperationDialogComponent {
   readonly serverError = signal<string | null>(null);
 
   private original: OperationSnapshot | null = null;
+  private returnFocusTo: HTMLElement | null = null;
+  private isOpen = false;
 
   readonly isBond = computed(() => this.asset().type === 'BOND');
   readonly isEdit = computed(() => this.operation() !== null);
@@ -137,9 +154,21 @@ export class OperationDialogComponent {
 
   constructor() {
     effect(() => {
-      if (this.visible()) {
-        this.resetForm();
+      const isVisible = this.visible();
+      if (isVisible === this.isOpen) {
+        return;
       }
+      this.isOpen = isVisible;
+
+      untracked(() => {
+        if (isVisible) {
+          this.returnFocusTo = rememberActiveElement();
+          this.resetForm();
+        } else {
+          restoreFocus(this.returnFocusTo);
+          this.returnFocusTo = null;
+        }
+      });
     });
 
     this.form.valueChanges
@@ -181,7 +210,12 @@ export class OperationDialogComponent {
     this.submitted.set(true);
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid) {
+      focusFirstInvalidField(this.form, FIELD_IDS);
+      return;
+    }
+
+    if (this.saving()) {
       return;
     }
 

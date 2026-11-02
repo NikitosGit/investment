@@ -96,4 +96,11 @@ describe('PositionsTableComponent', () => {
     expect(normalize(element.textContent ?? '')).toContain('Устарело');
     expect(normalize(element.textContent ?? '')).toContain('MOEX');
   });
+
+  it('has an accessible name for the table', () => {
+    const fixture = create();
+    const table = fixture.nativeElement.querySelector('table') as HTMLTableElement;
+
+    expect(table.getAttribute('aria-label')).toBe('Открытые позиции портфеля');
+  });
 });

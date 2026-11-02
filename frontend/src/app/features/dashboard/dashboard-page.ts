@@ -19,6 +19,7 @@ import type { ApiError } from '../../core/api/api-error';
 import type { DashboardResponse, DashboardSeriesPointOut, Period } from '../../core/api/models';
 import { toPeriod } from '../../core/api/models';
 import { DatePipe } from '../../core/formatting/date.pipe';
+import { currencyLabel } from '../../core/formatting/labels';
 import { MoneyPipe } from '../../core/formatting/money.pipe';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { NotificationService } from '../../core/services/notification.service';
@@ -96,7 +97,7 @@ export class DashboardPage implements OnInit {
       return 'Сводка по портфелю: стоимость, вложенные средства и выплаты.';
     }
 
-    return `Данные на ${this.datePipe.transform(dashboard.as_of)} · ${dashboard.currency}`;
+    return `Данные на ${this.datePipe.transform(dashboard.as_of)} · ${currencyLabel(dashboard.currency)}`;
   });
 
   readonly positionsHint = computed(() => {
@@ -107,6 +108,8 @@ export class DashboardPage implements OnInit {
   readonly chartSeries = computed<readonly DashboardSeriesPointOut[]>(
     () => this.data()?.series ?? [],
   );
+
+  readonly currencyLabel = currencyLabel;
 
   ngOnInit(): void {
     // The first request intentionally omits `period`: the backend applies the

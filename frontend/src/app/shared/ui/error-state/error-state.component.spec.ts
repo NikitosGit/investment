@@ -19,7 +19,7 @@ describe('ErrorStateComponent', () => {
 
   it('renders the message and emits retry', () => {
     const fixture = TestBed.createComponent(ErrorStateComponent);
-    fixture.componentRef.setInput('message', 'Нет связи с backend');
+    fixture.componentRef.setInput('message', 'Нет связи с сервером');
     fixture.detectChanges();
 
     let retried = 0;
@@ -27,7 +27,7 @@ describe('ErrorStateComponent', () => {
 
     const element = fixture.nativeElement as HTMLElement;
     expect(element.getAttribute('role')).toBeNull();
-    expect(element.textContent).toContain('Нет связи с backend');
+    expect(element.textContent).toContain('Нет связи с сервером');
     expect(element.querySelector('[role="alert"]')).toBeTruthy();
 
     fixture.debugElement.query(By.css('button')).nativeElement.click();

@@ -55,7 +55,7 @@ describe('apiErrorInterceptor', () => {
 
     expect(caught?.status).toBe(0);
     expect(caught?.code).toBe('NETWORK_ERROR');
-    expect(caught?.message).toBe('Нет связи с backend');
+    expect(caught?.message).toBe('Нет связи с сервером');
   });
 
   it('normalizes an unknown non-JSON failure', () => {

@@ -2,6 +2,11 @@
   <div class="value-chart__empty" role="status">Нет данных для графика</div>
 } @else {
   <div class="value-chart__canvas" [style.height]="height()">
-    <p-chart type="line" [data]="chartData()" [options]="chartOptions" />
+    <p-chart
+      type="line"
+      [data]="chartData()"
+      [options]="chartOptions"
+      [ariaLabel]="chartAriaLabel()"
+    />
   </div>
 }

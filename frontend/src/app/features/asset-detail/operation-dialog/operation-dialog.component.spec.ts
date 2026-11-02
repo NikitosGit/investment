@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import Aura from '@primeuix/themes/aura';
 import { providePrimeNG } from 'primeng/config';
@@ -125,6 +125,58 @@ describe('OperationDialogComponent', () => {
     expect(component.showError('price')).toBeTrue();
   });
 
+  it('moves focus to the first invalid field after submit', fakeAsync(() => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+    tick(10);
+
+    component.form.patchValue({ trade_date: null, quantity: '', price: '' });
+    component.submit();
+
+    expect(document.activeElement?.id).toBe('operation-trade-date');
+  }));
+
+  it('exposes a modal dialog, traps focus and closes on Escape', fakeAsync(() => {
+    const trigger = document.createElement('button');
+    trigger.id = 'dialog-trigger';
+    document.body.appendChild(trigger);
+
+    const fixture = TestBed.createComponent(OperationDialogComponent);
+    fixture.componentRef.setInput('asset', STOCK);
+    fixture.componentRef.setInput('operation', null);
+    trigger.focus();
+    fixture.componentRef.setInput('visible', true);
+    fixture.detectChanges();
+    tick(10);
+
+    const dialog = document.querySelector('[role="dialog"]') as HTMLElement | null;
+    expect(dialog?.getAttribute('aria-modal')).toBe('true');
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    fixture.detectChanges();
+    tick(10);
+
+    expect(fixture.componentInstance.visible()).toBeFalse();
+    expect(document.activeElement).toBe(trigger);
+
+    trigger.remove();
+  }));
+
+  it('links the trade date error to the date field', () => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+
+    component.form.controls.trade_date.setValue(null);
+    component.submit();
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector(
+      '#operation-trade-date',
+    ) as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('operation-trade-date-error');
+  });
+
   it('creates a stock operation with the price kept as a decimal string', () => {
     const fixture = create();
     const component = fixture.componentInstance;
@@ -188,6 +240,24 @@ describe('OperationDialogComponent', () => {
 
     expect(operations.update).toHaveBeenCalledWith(5, { quantity: 6 });
     expect(operations.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps entered values when the asset input changes while the dialog is open', () => {
+    const fixture = create(STOCK);
+    const component = fixture.componentInstance;
+
+    component.form.patchValue({
+      quantity: '5',
+      price: '300,5',
+      note: 'Не сбрасывать',
+    });
+
+    fixture.componentRef.setInput('asset', BOND);
+    fixture.detectChanges();
+
+    expect(component.form.controls.quantity.value).toBe('5');
+    expect(component.form.controls.price.value).toBe('300,5');
+    expect(component.form.controls.note.value).toBe('Не сбрасывать');
   });
 
   it('sends note: null when a non-empty note is cleared', () => {

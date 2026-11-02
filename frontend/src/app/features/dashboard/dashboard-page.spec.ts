@@ -230,6 +230,15 @@ describe('DashboardPage', () => {
     ).toContain('/income');
   });
 
+  it('gives the coupons table an accessible name', () => {
+    const fixture = create();
+    const table = fixture.nativeElement.querySelector(
+      '.dashboard-coupons',
+    ) as HTMLTableElement;
+
+    expect(table.getAttribute('aria-label')).toBe('Ближайшие купоны');
+  });
+
   it('requests the selected period without changing totals', () => {
     dashboard.getDashboard.and.callFake((period?: Period) =>
       of(
@@ -364,14 +373,14 @@ describe('DashboardPage', () => {
 
   it('shows an error state on the initial failure and retries', () => {
     dashboard.getDashboard.and.returnValues(
-      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend')),
+      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером')),
       of(makeDashboard()),
     );
 
     const fixture = create();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(textOf(element)).toContain('Нет связи с backend');
+    expect(textOf(element)).toContain('Нет связи с сервером');
 
     element.querySelector<HTMLButtonElement>('app-error-state button')?.click();
     fixture.detectChanges();
@@ -402,7 +411,7 @@ describe('DashboardPage', () => {
   it('keeps the last good data and shows a toast when a refresh fails', () => {
     dashboard.getDashboard.and.returnValues(
       of(makeDashboard()),
-      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend')),
+      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером')),
     );
 
     const fixture = create();

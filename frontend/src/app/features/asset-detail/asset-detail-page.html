@@ -67,7 +67,7 @@
         </div>
         <div>
           <dt>Валюта</dt>
-          <dd>{{ asset.currency }}</dd>
+          <dd>{{ currencyLabel(asset.currency) }}</dd>
         </div>
         <div>
           <dt>Размер лота</dt>
@@ -164,9 +164,9 @@
     <section class="asset-detail__panel" aria-labelledby="asset-operations-title">
       <header class="asset-detail__panel-head">
         <div>
-          <h2 id="asset-operations-title">Операции</h2>
+          <h2 id="asset-operations-title" #operationsTitle tabindex="-1">Операции</h2>
           <p class="asset-detail__hint">
-            История покупок и продаж. Цена в рублях рассчитана backend.
+            История покупок и продаж. Цена в рублях рассчитана сервером.
           </p>
         </div>
         <p-button
@@ -196,6 +196,7 @@
           [scrollable]="true"
           styleClass="asset-detail-table"
           [tableStyle]="{ 'min-width': '820px' }"
+          [pt]="{ table: { 'aria-labelledby': 'asset-operations-title' } }"
         >
           <ng-template pTemplate="header">
             <tr>
@@ -266,12 +267,15 @@
 
       <div class="asset-detail__income">
         <div class="asset-detail__income-group">
-          <h3>Выплаченные</h3>
+          <h3 id="asset-paid-incomes-title">Выплаченные</h3>
           @if (paidIncomes().length === 0) {
             <p class="asset-detail__muted">Выплаченных доходов нет.</p>
           } @else {
             <div class="asset-detail__mini-scroll">
-              <table class="asset-detail__mini-table">
+              <table
+                class="asset-detail__mini-table"
+                aria-labelledby="asset-paid-incomes-title"
+              >
                 <thead>
                   <tr>
                     <th scope="col">Дата</th>
@@ -294,12 +298,15 @@
         </div>
 
         <div class="asset-detail__income-group">
-          <h3>Ожидаемые купоны</h3>
+          <h3 id="asset-expected-incomes-title">Ожидаемые купоны</h3>
           @if (expectedIncomes().length === 0) {
             <p class="asset-detail__muted">Ожидаемых купонов нет.</p>
           } @else {
             <div class="asset-detail__mini-scroll">
-              <table class="asset-detail__mini-table">
+              <table
+                class="asset-detail__mini-table"
+                aria-labelledby="asset-expected-incomes-title"
+              >
                 <thead>
                   <tr>
                     <th scope="col">Дата</th>
@@ -369,6 +376,7 @@
           scrollHeight="320px"
           styleClass="asset-detail-table"
           [tableStyle]="{ 'min-width': '560px' }"
+          [pt]="{ table: { 'aria-labelledby': 'asset-quotes-title' } }"
         >
           <ng-template pTemplate="header">
             <tr>
@@ -405,4 +413,12 @@
     [operation]="editingOperation()"
     (saved)="onOperationSaved()"
   />
+} @else {
+  <app-empty-state
+    icon="pi pi-search"
+    title="Актив не найден"
+    message="Проверьте адрес или вернитесь в портфель, чтобы выбрать другой актив."
+  >
+    <a pButton label="В портфель" icon="pi pi-briefcase" routerLink="/portfolio"></a>
+  </app-empty-state>
 }

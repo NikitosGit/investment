@@ -2,14 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   HostListener,
   OnInit,
+  ViewChild,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
@@ -18,6 +21,7 @@ import { filter } from 'rxjs';
 import type { HealthResponse } from '../../core/api/models';
 import { DatePipe } from '../../core/formatting/date.pipe';
 import { HealthService } from '../../core/services/health.service';
+import { rememberActiveElement, restoreFocus } from '../../shared/a11y/focus';
 import { NAV_ITEMS, activeSectionForUrl } from '../navigation';
 import type { NavSection } from '../navigation';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -53,11 +57,19 @@ const DESKTOP_QUERY = '(min-width: 901px)';
 export class ShellComponent implements OnInit {
   private readonly healthService = inject(HealthService);
   private readonly router = inject(Router);
+  private readonly confirmation = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly datePipe = inject(DatePipe);
 
   readonly navItems = NAV_ITEMS;
   readonly menuOpen = signal(false);
+
+  @ViewChild('menuButton')
+  private readonly menuButton?: ElementRef<HTMLButtonElement>;
+
+  @ViewChild('mainContent')
+  private readonly mainContent?: ElementRef<HTMLElement>;
+
   readonly health = signal<HealthResponse | null>(null);
   readonly healthState = signal<HealthState>('loading');
   readonly activeSection = signal<NavSection | null>(activeSectionForUrl(this.router.url));
@@ -67,13 +79,21 @@ export class ShellComponent implements OnInit {
   readonly healthPresentation = computed<HealthPresentation>(() => {
     switch (this.healthState()) {
       case 'ok':
-        return { label: 'API: ok', severity: 'success', icon: 'pi pi-check' };
+        return { label: 'Сервер: работает', severity: 'success', icon: 'pi pi-check' };
       case 'degraded':
-        return { label: 'API: degraded', severity: 'warn', icon: 'pi pi-exclamation-triangle' };
+        return {
+          label: 'Сервер: ограничен',
+          severity: 'warn',
+          icon: 'pi pi-exclamation-triangle',
+        };
       case 'offline':
-        return { label: 'API: offline', severity: 'danger', icon: 'pi pi-times' };
+        return { label: 'Сервер: недоступен', severity: 'danger', icon: 'pi pi-times' };
       default:
-        return { label: 'API: проверка…', severity: 'secondary', icon: 'pi pi-spin pi-spinner' };
+        return {
+          label: 'Сервер: проверка…',
+          severity: 'secondary',
+          icon: 'pi pi-spin pi-spinner',
+        };
     }
   });
 
@@ -92,6 +112,8 @@ export class ShellComponent implements OnInit {
     }
   };
 
+  private returnFocusAfterConfirm: HTMLElement | null = null;
+
   constructor() {
     this.router.events
       .pipe(
@@ -100,6 +122,15 @@ export class ShellComponent implements OnInit {
       )
       .subscribe((event) => {
         this.activeSection.set(activeSectionForUrl(event.urlAfterRedirects));
+      });
+
+    this.confirmation.requireConfirmation$
+      .pipe(
+        filter((confirmation) => confirmation !== null),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => {
+        this.returnFocusAfterConfirm = rememberActiveElement();
       });
   }
 
@@ -134,12 +165,32 @@ export class ShellComponent implements OnInit {
     }
   }
 
-  closeMenu(): void {
+  closeMenu(focusTarget: 'none' | 'menuButton' | 'main' = 'none'): void {
     this.menuOpen.set(false);
+
+    if (focusTarget === 'menuButton') {
+      this.menuButton?.nativeElement.focus();
+    } else if (focusTarget === 'main') {
+      this.mainContent?.nativeElement.focus();
+    }
+  }
+
+  /** Skip the shell navigation without letting the base href change the route. */
+  skipToMain(event: Event): void {
+    event.preventDefault();
+    this.mainContent?.nativeElement.focus();
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    this.closeMenu();
+    if (this.menuOpen()) {
+      this.closeMenu('menuButton');
+    }
+  }
+
+  /** Return focus to the control that opened the confirmation dialog. */
+  onConfirmHide(): void {
+    restoreFocus(this.returnFocusAfterConfirm);
+    this.returnFocusAfterConfirm = null;
   }
 }

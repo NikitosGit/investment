@@ -34,6 +34,8 @@
         [showOnFocus]="false"
         appendTo="body"
         styleClass="operation-form__datepicker"
+        [appAriaDescribedBy]="showError('trade_date') ? 'operation-trade-date-error' : null"
+        [appAriaInvalid]="showError('trade_date')"
       />
       @if (showError('trade_date')) {
         <small id="operation-trade-date-error" class="operation-form__error">
@@ -50,6 +52,7 @@
         formControlName="quantity"
         inputmode="numeric"
         autocomplete="off"
+        [attr.aria-invalid]="showError('quantity')"
         [attr.aria-describedby]="showError('quantity') ? 'operation-quantity-error' : 'operation-quantity-hint'"
       />
       @if (showError('quantity')) {
@@ -71,6 +74,7 @@
         formControlName="price"
         inputmode="decimal"
         autocomplete="off"
+        [attr.aria-invalid]="showError('price')"
         [attr.aria-describedby]="showError('price') ? 'operation-price-error' : null"
       />
       @if (showError('price')) {
@@ -95,7 +99,7 @@
           <small class="operation-form__hint">Текущий номинал: {{ faceValue() | money }}</small>
         }
         <small class="operation-form__hint">
-          Рублёвый эквивалент рассчитает backend по номиналу на дату сделки.
+          Рублёвый эквивалент рассчитает сервер по номиналу на дату сделки.
         </small>
       </div>
     }
@@ -108,6 +112,7 @@
         formControlName="note"
         rows="3"
         maxlength="500"
+        [attr.aria-invalid]="showError('note')"
         [attr.aria-describedby]="showError('note') ? 'operation-note-error' : null"
       ></textarea>
       @if (showError('note')) {

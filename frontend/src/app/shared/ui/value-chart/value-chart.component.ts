@@ -121,6 +121,22 @@ export function buildValueChartOptions(): ChartOptions<'line'> {
   };
 }
 
+/** Accessible summary of the chart for screen readers. */
+export function buildChartAriaLabel(series: readonly DashboardSeriesPointOut[]): string {
+  if (series.length === 0) {
+    return 'График стоимости портфеля: нет данных';
+  }
+
+  const first = series[0];
+  const last = series[series.length - 1];
+
+  return (
+    `График стоимости портфеля с ${formatChartDate(first.date)} по ${formatChartDate(last.date)}. ` +
+    `Стоимость на конец периода: ${formatChartMoney(Number(last.market_value))}, ` +
+    `вложено: ${formatChartMoney(Number(last.invested))}. Точек: ${series.length}.`
+  );
+}
+
 /** Line chart of portfolio value versus invested capital. */
 @Component({
   selector: 'app-value-chart',
@@ -136,4 +152,7 @@ export class ValueChartComponent {
 
   readonly chartData = computed(() => buildValueChartData(this.series()));
   readonly chartOptions = buildValueChartOptions();
+
+  /** Screen-reader summary: the canvas is decorative without a name. */
+  readonly chartAriaLabel = computed(() => buildChartAriaLabel(this.series()));
 }

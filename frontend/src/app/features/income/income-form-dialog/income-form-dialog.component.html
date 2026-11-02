@@ -45,12 +45,12 @@
 
         @if (isExpectedEdit()) {
           <p class="income-form__hint">
-            Сумма, количество и дата выплаты ожидаемого купона рассчитываются backend и на
+            Сумма, количество и дата выплаты ожидаемого купона рассчитываются сервером и на
             расписании MOEX. Здесь можно изменить только комментарий и дату фиксации.
           </p>
         } @else {
           <p class="income-form__hint">
-            Итоговая сумма авторитетна: сумму за единицу backend пересчитает из итога.
+            Итоговая сумма авторитетна: сумму за единицу сервер пересчитает из итога.
           </p>
         }
       </div>
@@ -58,19 +58,23 @@
 
     @if (!isEdit()) {
       <div class="income-form__field">
-        <label class="income-form__label" for="income-form-kind">Тип дохода</label>
+        <label class="income-form__label" id="income-form-kind-label" for="income-form-kind">
+          Тип дохода
+        </label>
         <p-select
           inputId="income-form-kind"
           formControlName="kind"
           [options]="kindOptions"
           optionLabel="label"
           optionValue="value"
-          ariaLabel="Тип дохода"
+          [ariaLabelledBy]="'income-form-kind-label'"
         />
       </div>
 
       <div class="income-form__field">
-        <label class="income-form__label" for="income-form-asset">Актив</label>
+        <label class="income-form__label" id="income-form-asset-label" for="income-form-asset">
+          Актив
+        </label>
         <p-select
           inputId="income-form-asset"
           formControlName="asset_id"
@@ -80,7 +84,13 @@
           placeholder="Выберите актив"
           [filter]="true"
           filterBy="label"
-          [attr.aria-describedby]="showError('asset_id') ? 'income-form-asset-error' : null"
+          [ariaLabelledBy]="'income-form-asset-label'"
+          [pt]="{
+            label: {
+              'aria-describedby': showError('asset_id') ? 'income-form-asset-error' : null,
+              'aria-invalid': showError('asset_id') ? 'true' : null
+            }
+          }"
         />
         @if (showError('asset_id')) {
           <small id="income-form-asset-error" class="income-form__error">
@@ -99,6 +109,7 @@
           formControlName="amount_total"
           inputmode="decimal"
           autocomplete="off"
+          [attr.aria-invalid]="showError('amount_total')"
           [attr.aria-describedby]="showError('amount_total') ? 'income-form-total-error' : 'income-form-total-hint'"
         />
         @if (showError('amount_total')) {
@@ -122,6 +133,8 @@
           [showOnFocus]="false"
           appendTo="body"
           styleClass="income-form__datepicker"
+          [appAriaDescribedBy]="showError('pay_date') ? 'income-form-pay-date-error' : null"
+          [appAriaInvalid]="showError('pay_date')"
         />
         @if (showError('pay_date')) {
           <small id="income-form-pay-date-error" class="income-form__error">
@@ -140,6 +153,7 @@
           formControlName="quantity"
           inputmode="numeric"
           autocomplete="off"
+          [attr.aria-invalid]="showError('quantity')"
           [attr.aria-describedby]="showError('quantity') ? 'income-form-quantity-error' : 'income-form-quantity-hint'"
         />
         @if (showError('quantity')) {
@@ -151,7 +165,7 @@
             @if (isEdit()) {
               Целое неотрицательное число.
             } @else {
-              Если не указать — backend подставит текущее количество по активу.
+              Если не указать — сервер подставит текущее количество по активу.
             }
           </small>
         }
@@ -169,6 +183,7 @@
           formControlName="amount_per_unit"
           inputmode="decimal"
           autocomplete="off"
+          [attr.aria-invalid]="showError('amount_per_unit')"
           [attr.aria-describedby]="showError('amount_per_unit') ? 'income-form-per-unit-error' : 'income-form-per-unit-hint'"
         />
         @if (showError('amount_per_unit')) {
@@ -177,7 +192,7 @@
           </small>
         } @else {
           <small id="income-form-per-unit-hint" class="income-form__hint">
-            Итог авторитетен; значение за единицу backend выведет из итога.
+            Итог авторитетен; значение за единицу сервер выведет из итога.
           </small>
         }
       </div>
@@ -209,6 +224,7 @@
         formControlName="note"
         rows="3"
         maxlength="500"
+        [attr.aria-invalid]="showError('note')"
         [attr.aria-describedby]="showError('note') ? 'income-form-note-error' : 'income-form-note-hint'"
       ></textarea>
       @if (showError('note')) {

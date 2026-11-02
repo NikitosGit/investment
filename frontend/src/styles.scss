@@ -173,6 +173,36 @@ a:focus-visible {
   border: 0;
 }
 
+.skip-link {
+  position: fixed;
+  top: var(--app-space-2);
+  left: var(--app-space-2);
+  z-index: 1000;
+  padding: var(--app-space-2) var(--app-space-4);
+  color: var(--app-text-inverse);
+  font-weight: 600;
+  background: var(--app-primary-hover);
+  border-radius: var(--app-radius-sm);
+  transform: translateY(-200%);
+  transition: transform 120ms ease-out;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 3px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+  text-decoration: none;
+}
+
+main:focus {
+  outline: none;
+}
+
+main:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.45);
+  outline-offset: 8px;
+}
+
 /* ---------------------------------------------------------------------------
  * Layout helpers
  * ------------------------------------------------------------------------ */
@@ -215,6 +245,15 @@ a:focus-visible {
   .hide-mobile {
     display: none !important;
   }
+
+  .p-toast {
+    width: calc(100vw - 2 * var(--app-space-2)) !important;
+  }
+
+  .p-toast.p-toast-top-right {
+    left: var(--app-space-2) !important;
+    right: var(--app-space-2) !important;
+  }
 }
 
 @media (min-width: 721px) {
@@ -234,6 +273,11 @@ a:focus-visible {
  * ------------------------------------------------------------------------ */
 .p-toast {
   max-width: calc(100vw - 2rem);
+}
+
+.p-toast.p-toast-top-right {
+  top: calc(var(--app-header-height) + var(--app-space-2)) !important;
+  right: var(--app-space-2) !important;
 }
 
 .p-confirmdialog {

@@ -206,14 +206,14 @@ describe('PortfolioPage', () => {
 
   it('shows an error state and retries', () => {
     positions.getPositions.and.returnValues(
-      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с backend')),
+      throwError(() => new ApiError(0, 'NETWORK_ERROR', 'Нет связи с сервером')),
       of(makePositions()),
     );
 
     const fixture = create();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(normalize(element.textContent ?? '')).toContain('Нет связи с backend');
+    expect(normalize(element.textContent ?? '')).toContain('Нет связи с сервером');
 
     element.querySelector<HTMLButtonElement>('app-error-state button')?.click();
     fixture.detectChanges();

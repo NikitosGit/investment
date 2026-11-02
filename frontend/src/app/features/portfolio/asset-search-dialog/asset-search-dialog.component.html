@@ -35,13 +35,13 @@
         }
       </div>
       <p id="asset-search-hint" class="asset-search__hint">
-        Поиск выполняется через backend после паузы в 400 мс. Нужна связь с MOEX.
+        Поиск выполняется на сервере после паузы в 400 мс. Нужна связь с MOEX.
       </p>
     </div>
 
     @if (localAssetsWarning()) {
       <p-message severity="warn" styleClass="asset-search__message">
-        Не удалось проверить локальные активы. Дубликат всё равно отклонит backend.
+        Не удалось проверить локальные активы. Дубликат всё равно отклонит сервер.
       </p-message>
     }
 
@@ -61,11 +61,13 @@
     }
 
     @if (!hasQuery()) {
-      <p class="asset-search__state">Введите тикер или название бумаги.</p>
+      <p class="asset-search__state" role="status">Введите тикер или название бумаги.</p>
     } @else if (loading() && results().length === 0) {
-      <p class="asset-search__state">Ищем бумаги в MOEX…</p>
+      <p class="asset-search__state" role="status">Ищем бумаги в MOEX…</p>
     } @else if (isEmptyResult()) {
-      <p class="asset-search__state">Ничего не найдено. Проверьте тикер или попробуйте позже.</p>
+      <p class="asset-search__state" role="status">
+        Ничего не найдено. Проверьте тикер или попробуйте позже.
+      </p>
     } @else if (results().length > 0) {
       <ul class="asset-search__results" aria-label="Результаты поиска">
         @for (item of results(); track item.secid + '-' + item.board) {

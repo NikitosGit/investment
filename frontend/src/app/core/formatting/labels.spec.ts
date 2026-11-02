@@ -1,5 +1,6 @@
 import {
   assetTypeLabel,
+  currencyLabel,
   dataSourceLabel,
   incomeKindLabel,
   incomeStatusLabel,
@@ -27,5 +28,10 @@ describe('Russian domain labels', () => {
   it('labels data sources', () => {
     expect(dataSourceLabel('MOEX')).toBe('MOEX');
     expect(dataSourceLabel('MANUAL')).toBe('Вручную');
+  });
+
+  it('replaces the ruble ISO code with a readable label', () => {
+    expect(currencyLabel('RUB')).toBe('руб.');
+    expect(currencyLabel('USD')).toBe('USD');
   });
 });

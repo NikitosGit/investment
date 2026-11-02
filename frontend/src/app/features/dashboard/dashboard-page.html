@@ -56,7 +56,7 @@
           <div>
             <h2 id="dashboard-chart-title">Динамика стоимости</h2>
             <p class="dashboard__hint">
-              Период: {{ periodLabel(selectedPeriod()) }} · {{ dashboard.currency }}
+              Период: {{ periodLabel(selectedPeriod()) }} · {{ currencyLabel(dashboard.currency) }}
             </p>
           </div>
 
@@ -111,7 +111,7 @@
           <p class="dashboard__empty-row">Ближайших купонов нет.</p>
         } @else {
           <div class="dashboard__coupons-scroll">
-            <table class="dashboard-coupons">
+            <table class="dashboard-coupons" aria-label="Ближайшие купоны">
               <thead>
                 <tr>
                   <th scope="col">Дата выплаты</th>

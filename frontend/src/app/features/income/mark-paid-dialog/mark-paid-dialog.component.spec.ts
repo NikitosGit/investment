@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import Aura from '@primeuix/themes/aura';
 import { providePrimeNG } from 'primeng/config';
@@ -119,6 +119,38 @@ describe('MarkPaidDialogComponent', () => {
     expect(incomes.markPaid).not.toHaveBeenCalled();
     expect(component.showError('amount_total')).toBeTrue();
     expect(component.errorText('amount_total')).toContain('больше нуля');
+  });
+
+  it('focuses the invalid amount and links hints to the date field', fakeAsync(() => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+    const element = fixture.nativeElement as HTMLElement;
+    tick(10);
+
+    component.form.controls.amount_total.setValue('0');
+    component.submit();
+    fixture.detectChanges();
+
+    expect(document.activeElement?.id).toBe('mark-paid-amount');
+    expect(
+      element.querySelector('#mark-paid-date')?.getAttribute('aria-describedby'),
+    ).toBe('mark-paid-date-hint');
+  }));
+
+  it('keeps entered values when the income input changes while the dialog is open', () => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+
+    component.form.patchValue({
+      amount_total: '500',
+      pay_date: new Date(2026, 11, 1),
+    });
+
+    fixture.componentRef.setInput('income', { ...EXPECTED, id: 4, amount_total: '999.00' });
+    fixture.detectChanges();
+
+    expect(component.form.controls.amount_total.value).toBe('500');
+    expect(component.form.controls.pay_date.value).toEqual(new Date(2026, 11, 1));
   });
 
   it('maps 422 field errors onto the amount control', () => {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -30,6 +30,11 @@ import { PriceSourceBadgeComponent } from '../price-source-badge/price-source-ba
 })
 export class PositionsTableComponent {
   readonly positions = input.required<PositionItem[]>();
+  readonly tableLabel = input<string>('Открытые позиции портфеля');
+
+  readonly tablePt = computed(() => ({
+    table: { 'aria-label': this.tableLabel() },
+  }));
 
   readonly assetTypeLabel = assetTypeLabel;
   readonly toPriceSource = toPriceSource;

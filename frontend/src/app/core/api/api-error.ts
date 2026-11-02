@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import type { ApiErrorBody, ValidationFieldError } from './models';
 
 /** Default user-facing messages (never expose raw payloads or stack traces). */
-const NETWORK_MESSAGE = 'Нет связи с backend';
+const NETWORK_MESSAGE = 'Нет связи с сервером';
 const UNKNOWN_MESSAGE = 'Произошла непредвиденная ошибка';
 const SERVER_MESSAGE = 'Ошибка сервера. Попробуйте повторить позже';
 const NOT_FOUND_MESSAGE = 'Запрашиваемые данные не найдены';

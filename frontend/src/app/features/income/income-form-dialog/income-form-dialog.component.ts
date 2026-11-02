@@ -9,6 +9,7 @@ import {
   model,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -44,6 +45,12 @@ import {
 } from '../../../core/formatting/validators';
 import { IncomeService } from '../../../core/services/income.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AriaDescribedByDirective } from '../../../shared/a11y/aria-described-by.directive';
+import {
+  focusFirstInvalidField,
+  rememberActiveElement,
+  restoreFocus,
+} from '../../../shared/a11y/focus';
 import { applyServerFieldErrors } from '../../../shared/forms/server-field-errors';
 import type { SelectOption } from '../../../shared/ui/select-option';
 import { toIncomeAssetOptions } from '../income-options';
@@ -73,6 +80,17 @@ const REQUIRED_MESSAGES: Partial<Record<IncomeField, string>> = {
   quantity: 'Укажите количество.',
 };
 
+const FIELD_IDS: Readonly<Record<IncomeField, string>> = {
+  kind: 'income-form-kind',
+  asset_id: 'income-form-asset',
+  amount_total: 'income-form-total',
+  pay_date: 'income-form-pay-date',
+  quantity: 'income-form-quantity',
+  amount_per_unit: 'income-form-per-unit',
+  record_date: 'income-form-record-date',
+  note: 'income-form-note',
+};
+
 /** Create/edit dialog for a manual income or an expected coupon. */
 @Component({
   selector: 'app-income-form-dialog',
@@ -88,6 +106,7 @@ const REQUIRED_MESSAGES: Partial<Record<IncomeField, string>> = {
     TextareaModule,
     DatePipe,
     MoneyPipe,
+    AriaDescribedByDirective,
   ],
   templateUrl: './income-form-dialog.component.html',
   styleUrl: './income-form-dialog.component.scss',
@@ -125,6 +144,8 @@ export class IncomeFormDialogComponent {
   readonly serverError = signal<string | null>(null);
 
   private original: IncomeSnapshot | null = null;
+  private returnFocusTo: HTMLElement | null = null;
+  private isOpen = false;
 
   readonly isEdit = computed(() => this.income() !== null);
   readonly isExpectedEdit = computed(() => this.income()?.status === 'EXPECTED');
@@ -168,9 +189,21 @@ export class IncomeFormDialogComponent {
     this.configureValidators();
 
     effect(() => {
-      if (this.visible()) {
-        this.resetForm();
+      const isVisible = this.visible();
+      if (isVisible === this.isOpen) {
+        return;
       }
+      this.isOpen = isVisible;
+
+      untracked(() => {
+        if (isVisible) {
+          this.returnFocusTo = rememberActiveElement();
+          this.resetForm();
+        } else {
+          restoreFocus(this.returnFocusTo);
+          this.returnFocusTo = null;
+        }
+      });
     });
 
     this.form.valueChanges
@@ -212,7 +245,12 @@ export class IncomeFormDialogComponent {
     this.submitted.set(true);
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid) {
+      focusFirstInvalidField(this.form, FIELD_IDS);
+      return;
+    }
+
+    if (this.saving()) {
       return;
     }
 

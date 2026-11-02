@@ -47,6 +47,7 @@
         formControlName="amount_total"
         inputmode="decimal"
         autocomplete="off"
+        [attr.aria-invalid]="showError('amount_total')"
         [attr.aria-describedby]="showError('amount_total') ? 'mark-paid-amount-error' : 'mark-paid-amount-hint'"
       />
       @if (showError('amount_total')) {
@@ -55,7 +56,7 @@
         </small>
       } @else {
         <small id="mark-paid-amount-hint" class="mark-paid-form__hint">
-          Очистите поле, чтобы backend рассчитал сумму по текущей позиции.
+          Очистите поле, чтобы сервер рассчитал сумму по текущей позиции.
         </small>
       }
     </div>
@@ -71,9 +72,10 @@
         [showClear]="true"
         appendTo="body"
         styleClass="mark-paid-form__datepicker"
+        appAriaDescribedBy="mark-paid-date-hint"
       />
-      <small class="mark-paid-form__hint">
-        Если оставить дату пустой, backend сохранит дату из расписания.
+      <small id="mark-paid-date-hint" class="mark-paid-form__hint">
+        Если оставить дату пустой, сервер сохранит дату из расписания.
       </small>
     </div>
 

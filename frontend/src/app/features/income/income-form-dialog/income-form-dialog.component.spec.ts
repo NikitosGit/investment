@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import Aura from '@primeuix/themes/aura';
 import { providePrimeNG } from 'primeng/config';
@@ -122,6 +122,94 @@ describe('IncomeFormDialogComponent', () => {
     expect(component.showError('asset_id')).toBeTrue();
     expect(component.showError('amount_total')).toBeTrue();
     expect(component.showError('pay_date')).toBeTrue();
+  });
+
+  it('moves focus to the first invalid field after submit', fakeAsync(() => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+    tick(10);
+
+    component.form.patchValue({ asset_id: null, amount_total: '', pay_date: null });
+    component.submit();
+
+    expect(document.activeElement?.id).toBe('income-form-asset');
+  }));
+
+  it('associates select labels and the pay-date error with their controls', () => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(
+      element.querySelector('#income-form-asset')?.getAttribute('aria-labelledby'),
+    ).toBe('income-form-asset-label');
+    expect(
+      element.querySelector('#income-form-kind')?.getAttribute('aria-labelledby'),
+    ).toBe('income-form-kind-label');
+
+    component.form.controls.pay_date.setValue(null);
+    component.submit();
+    fixture.detectChanges();
+
+    const dateInput = element.querySelector('#income-form-pay-date') as HTMLInputElement;
+    expect(dateInput.getAttribute('aria-invalid')).toBe('true');
+    expect(dateInput.getAttribute('aria-describedby')).toBe('income-form-pay-date-error');
+    expect(
+      element.querySelector('#income-form-asset')?.getAttribute('aria-describedby'),
+    ).toBe('income-form-asset-error');
+    expect(
+      element.querySelector('#income-form-asset')?.getAttribute('aria-invalid'),
+    ).toBe('true');
+  });
+
+  it('keeps entered values when input signals change while the dialog is open', () => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+
+    component.form.patchValue({
+      kind: 'COUPON',
+      asset_id: 2,
+      amount_total: '777,77',
+      quantity: '15',
+      note: 'Не сбрасывать',
+      pay_date: new Date(2026, 10, 20),
+    });
+
+    fixture.componentRef.setInput('assets', [ASSETS[1]]);
+    fixture.componentRef.setInput('income', PAID_INCOME);
+    fixture.detectChanges();
+
+    expect(component.form.controls.kind.value).toBe('COUPON');
+    expect(component.form.controls.asset_id.value).toBe(2);
+    expect(component.form.controls.amount_total.value).toBe('777,77');
+    expect(component.form.controls.quantity.value).toBe('15');
+    expect(component.form.controls.note.value).toBe('Не сбрасывать');
+  });
+
+  it('keeps the selected asset after choosing it in p-select', () => {
+    const fixture = create();
+    const component = fixture.componentInstance;
+    const element = fixture.nativeElement as HTMLElement;
+
+    const assetSelect = element.querySelector('#income-form-asset') as HTMLElement;
+    assetSelect.click();
+    fixture.detectChanges();
+
+    const option = Array.from(
+      document.querySelectorAll<HTMLElement>('.p-select-option'),
+    ).find((candidate) => candidate.textContent?.includes('SBER'));
+    expect(option).toBeTruthy();
+
+    option?.click();
+    fixture.detectChanges();
+
+    expect(component.form.controls.asset_id.value).toBe(1);
+    expect(element.querySelector('#income-form-asset')?.textContent).toContain('SBER');
+
+    fixture.componentRef.setInput('assets', [...ASSETS]);
+    fixture.detectChanges();
+
+    expect(component.form.controls.asset_id.value).toBe(1);
   });
 
   it('creates a manual PAID income with optional fields and a normalized total', () => {

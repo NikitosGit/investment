@@ -37,6 +37,7 @@ import type {
 } from '../../../core/api/models';
 import { assetTypeLabel } from '../../../core/formatting/labels';
 import { AssetsService } from '../../../core/services/assets.service';
+import { rememberActiveElement, restoreFocus } from '../../../shared/a11y/focus';
 
 /** Search MOEX and add a security to the local portfolio. */
 @Component({
@@ -74,6 +75,7 @@ export class AssetSearchDialogComponent {
 
   private readonly retry$ = new Subject<void>();
   private readonly reset$ = new Subject<void>();
+  private returnFocusTo: HTMLElement | null = null;
 
   readonly hasQuery = computed(() => this.lastQuery().length > 0);
   readonly isEmptyResult = computed(
@@ -106,9 +108,12 @@ export class AssetSearchDialogComponent {
 
     effect(() => {
       if (!this.visible()) {
+        restoreFocus(this.returnFocusTo);
+        this.returnFocusTo = null;
         return;
       }
 
+      this.returnFocusTo = rememberActiveElement();
       this.resetSearch();
       this.loadExistingAssets();
     });

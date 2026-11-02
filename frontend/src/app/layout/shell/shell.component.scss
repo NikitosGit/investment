@@ -54,6 +54,11 @@
 
 .shell__health {
   display: inline-flex;
+  white-space: nowrap;
+}
+
+.shell__health ::ng-deep .p-tag {
+  white-space: nowrap;
 }
 
 .shell__menu-button {
@@ -158,5 +163,15 @@
   .shell__body {
     display: block;
     padding-top: var(--app-space-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .shell__brand-text {
+    display: none;
+  }
+
+  .shell__bar {
+    gap: var(--app-space-2);
   }
 }
