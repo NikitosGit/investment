@@ -70,9 +70,10 @@
 - `app/core/money.py`: `Decimal`-хелперы `rubles_to_micro/kopecks`, обратные конверсии и форматирование по контракту API; `float` не используется.
 - `app/providers/moex/`:
   - `client.py` — `MoexClient` (sync `httpx`): `search_securities`, `get_security_info`, `get_current_quote`, `get_history` (пагинация), `get_bondization`; retry (N попыток = retries + 1, экспоненциально 0.5/1/2 с), троттлинг ≤3 rps, `User-Agent`, `from_settings`.
-  - `mapper.py` — толерантный парсинг таблиц ISS: фильтр `is_traded`/`TQBR`/`TQCB`, приоритет `LAST→LCURRENTPRICE→MARKETPRICE→PREVPRICE`, `CLOSE`→`LEGALCLOSEPRICE`, `value_rub`→`value`, учёт регистра полей.
+  - `mapper.py` — толерантный парсинг таблиц ISS: фильтр `is_traded`/`TQBR`/`TQCB`/`TQOB`, приоритет `LAST→LCURRENTPRICE→MARKETPRICE→PREVPRICE`, `CLOSE`→`LEGALCLOSEPRICE`, `value_rub`→`value`, учёт регистра полей.
   - `errors.py` — `MOEX_UNAVAILABLE`(502), `MOEX_NOT_FOUND`(404), `MOEX_PARSE_ERROR`(502).
   - `schemas.py` — dataclass-результаты, независимые от БД и API.
+- `app/services/asset_service.py` / `quote_service.py`: поддержан `TQOB` и миграция board при refresh (например, ОФЗ `TQCB` → `TQOB`); quote refresh и history используют актуальный board, поэтому цена `SU26238RMFS4` обновляется с MOEX.
 - `app/api/error_handlers.py`: FastAPI-обработчики вынесены из `app/core/errors.py`, который стал framework-free (провайдер больше не тянет FastAPI).
 - Тесты: `test_money.py`, `test_moex_mapper.py`, `test_moex_client.py` (respx, JSON-фикстуры `tests/fixtures/moex/`), без сетевых вызовов.
 

@@ -289,11 +289,11 @@ curl http://127.0.0.1:8000/api/assets
     {
       "id": 2,
       "secid": "SU26238RMFS4",
-      "isin": "RU000A0JX0J2",
+      "isin": "RU000A1038V6",
       "name": "ОФЗ 26238",
       "short_name": "ОФЗ 26238",
       "type": "BOND",
-      "board": "TQCB",
+      "board": "TQOB",
       "currency": "RUB",
       "lot_size": 1,
       "is_active": true
@@ -312,11 +312,11 @@ curl http://127.0.0.1:8000/api/assets/2
 {
   "id": 2,
   "secid": "SU26238RMFS4",
-  "isin": "RU000A0JX0J2",
+  "isin": "RU000A1038V6",
   "name": "ОФЗ 26238",
   "short_name": "ОФЗ 26238",
   "type": "BOND",
-  "board": "TQCB",
+  "board": "TQOB",
   "currency": "RUB",
   "initial_face_value": "1000.00",
   "current_face_value": "800.00",
@@ -391,8 +391,9 @@ curl -X POST http://127.0.0.1:8000/api/assets \
 }
 ```
 
-- Поддерживаются только `TQBR` (акции) и `TQCB` (облигации).
-- `secid` нормализуется в верхний регистр; `board` должен быть точным (`TQBR`/`TQCB`).
+- Поддерживаются площадки `TQBR` (акции), `TQCB` (корпоративные облигации) и `TQOB` (ОФЗ).
+- `secid` нормализуется в верхний регистр; `board` должен быть точным (`TQBR`/`TQCB`/`TQOB`).
+- При `POST /api/assets/{id}/refresh` сохранённый board проверяется по MOEX; бумага может мигрировать на актуальный board (например, ОФЗ `TQCB` → `TQOB`), после чего quote refresh использует новый board.
 - Повторное добавление → `409 ASSET_ALREADY_EXISTS` (проверяется до обращения к MOEX).
 - Неподдерживаемая площадка → `400 BAD_REQUEST` с `details.supported`.
 - Для облигации backend сам загружает купоны, амортизацию и историю.
@@ -1470,7 +1471,7 @@ npx @openapitools/openapi-generator-cli generate \
 | Что в `PLAN.md` | Фактически |
 |---|---|
 | Нет `GET /api/assets` (списка) | Есть; используется для портфеля |
-| `POST /api/assets` без описания тела | Тело: `{"secid": "...", "board": "TQBR\|TQCB"}` |
+| `POST /api/assets` без описания тела | Тело: `{"secid": "...", "board": "TQBR\|TQCB\|TQOB"}` |
 | Нет `PATCH /api/portfolio` | Есть; переименование портфеля |
 | Нет `POST /api/assets/{id}/refresh` | Есть; обновление метаданных/расписаний |
 | Нет `POST /api/quotes/manual` | Есть; ручная цена |

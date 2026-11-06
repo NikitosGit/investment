@@ -114,15 +114,26 @@ class MoexClient:
         """
 
         payload = self._get(f"/securities/{quote(secid, safe='')}.json")
+        resolved_board = board
+        if resolved_board is None:
+            # Resolve the primary/supported board first, then fetch its
+            # board-specific fields (LOTSIZE) using the already loaded payload.
+            resolved = mapper.parse_security_info(payload)
+            if resolved is None:
+                raise MoexNotFound(f"Бумага {secid} не найдена в MOEX")
+            resolved_board = resolved.board
+
         board_payload: dict[str, Any] | None = None
-        if board is not None and mapper.requires_board_details(payload, board):
-            market = mapper.BOARD_MARKETS.get(board)
+        if resolved_board is not None and mapper.requires_board_details(payload, resolved_board):
+            market = mapper.BOARD_MARKETS.get(resolved_board)
             if market is not None:
                 board_payload = self._get(
-                    f"/engines/stock/markets/{market}/boards/{quote(board, safe='')}"
+                    f"/engines/stock/markets/{market}/boards/{quote(resolved_board, safe='')}"
                     f"/securities/{quote(secid, safe='')}.json"
                 )
-        info = mapper.parse_security_info(payload, board=board, board_payload=board_payload)
+        info = mapper.parse_security_info(
+            payload, board=resolved_board, board_payload=board_payload
+        )
         if info is None:
             raise MoexNotFound(f"Бумага {secid} не найдена в MOEX")
         return info

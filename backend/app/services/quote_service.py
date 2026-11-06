@@ -86,12 +86,24 @@ def get_last_quote(session: Session, asset_id: int, on_date: date | None = None)
     return session.scalars(statement).first()
 
 
-def refresh_asset(session: Session, client: MoexClient, asset: Asset) -> Quote | None:
+def refresh_asset(
+    session: Session,
+    client: MoexClient,
+    asset: Asset,
+    *,
+    ensure_board: bool = True,
+) -> Quote | None:
     """Fetch and cache today's price for one asset.
+
+    With ``ensure_board`` the asset's stored board is verified first, so a
+    security moved by MOEX (for example OFZ from ``TQCB`` to ``TQOB``) keeps
+    receiving quotes. Callers that already resolved the board pass ``False``.
 
     The caller owns the transaction: this function never commits.
     """
 
+    if ensure_board:
+        asset_service.resolve_security_info(session, client, asset)
     current = client.get_current_quote(
         asset.secid,
         asset.market,
@@ -191,9 +203,12 @@ def refresh_all(session: Session, client: MoexClient) -> RefreshResult:
         for asset in assets:
             asset_id, secid = asset.id, asset.secid
             try:
+                # Resolve the current board once: the quote and history both
+                # must use the same market/board even after a MOEX migration.
+                asset_service.resolve_security_info(session, client, asset)
                 # The intraday quote goes first; the history page then replaces
                 # today's row with the official CLOSE when MOEX returns one.
-                refresh_asset(session, client, asset)
+                refresh_asset(session, client, asset, ensure_board=False)
                 backfill_history(session, client, asset)
                 if asset.type is AssetType.BOND:
                     portfolio_id = portfolio_service.ensure_default_portfolio(
@@ -328,9 +343,10 @@ def sync_asset_quotes(
     """
 
     try:
+        # The caller already refreshed metadata, so the board is resolved.
         # The intraday quote goes first; the history page then replaces today's
         # row with the official CLOSE when MOEX returns one.
-        refresh_asset(session, client, asset)
+        refresh_asset(session, client, asset, ensure_board=False)
         backfill_history(session, client, asset, from_date=history_from)
         session.commit()
     except (MoexError, SQLAlchemyError) as exc:

@@ -1,7 +1,7 @@
 """Asset API tests backed by respx; no real network access."""
 
 from collections.abc import Callable
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import httpx
@@ -55,6 +55,7 @@ def test_search_returns_supported_items(
     assert items[0]["board"] == "TQBR"
     assert items[0]["type"] == "STOCK"
     assert items[2]["type"] == "BOND"
+    assert items[2]["board"] == "TQOB"
 
 
 def test_search_requires_query(client: TestClient) -> None:
@@ -282,6 +283,49 @@ def test_create_bond_from_current_moex_shape(
 
 
 @respx.mock
+def test_create_ofz_on_tqob(
+    client: TestClient,
+    db_session: Session,
+    fixed_today: None,
+    load_fixture: Callable[..., Any],
+) -> None:
+    """Government bonds trade on TQOB and are created like any other bond."""
+
+    secid = "SU26238RMFS4"
+    respx.get(f"{BASE_URL}/securities/{secid}.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json"))
+    )
+    respx.get(f"{BASE_URL}/engines/stock/markets/bonds/boards/TQOB/securities/{secid}.json").mock(
+        return_value=httpx.Response(
+            200, json=load_fixture("moex", "security_su26238_tqob_board.json")
+        )
+    )
+    respx.get(f"{BASE_URL}/securities/{secid}/bondization.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "bondization_su26238_tqob.json"))
+    )
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQOB/securities/{secid}.json"
+    ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
+
+    response = client.post("/api/assets", json={"secid": secid, "board": "TQOB"})
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["secid"] == secid
+    assert body["type"] == "BOND"
+    assert body["board"] == "TQOB"
+    assert body["isin"] == "RU000A1038V6"
+    assert body["initial_face_value"] == "1000.00"
+    assert body["current_face_value"] == "1000.00"
+    assert [item["amortization_date"] for item in body["amortizations"]] == ["2041-05-15"]
+
+    db_session.rollback()
+    stored = db_session.scalars(select(Asset)).one()
+    assert stored.board == "TQOB"
+    assert stored.market == "bonds"
+
+
+@respx.mock
 def test_refresh_bond_from_current_moex_shape(
     client: TestClient,
     db_session: Session,
@@ -360,6 +404,109 @@ def test_refresh_bond_from_current_moex_shape(
     db_session.rollback()
     stored = db_session.scalars(select(Asset)).one()
     assert stored.initial_face_value_kopecks == 100_000
+
+
+@respx.mock
+def test_refresh_legacy_tqcb_ofz_moves_to_tqob_and_reprices_position(
+    client: TestClient,
+    db_session: Session,
+    fixed_today: None,
+    load_fixture: Callable[..., Any],
+) -> None:
+    """A legacy TQCB asset follows MOEX to TQOB and gets a fresh MOEX quote."""
+
+    secid = "SU26238RMFS4"
+    asset = Asset(
+        secid=secid,
+        name="ОФЗ 26238",
+        type=AssetType.BOND,
+        engine="stock",
+        market="bonds",
+        board="TQCB",
+        currency="RUB",
+        lot_size=1,
+        initial_face_value_kopecks=100_000,
+    )
+    db_session.add(asset)
+    db_session.commit()
+
+    portfolio = portfolio_service.ensure_default_portfolio(db_session)
+    db_session.add_all(
+        [
+            Operation(
+                portfolio_id=portfolio.id,
+                asset_id=asset.id,
+                type=OperationType.BUY,
+                trade_date=date(2026, 1, 10),
+                quantity=60,
+                price_micro=100_000_000,
+                input_price_micro=100_000_000,
+                input_price_type=PriceType.PERCENT,
+            ),
+            # 200 of the 1000 face value has already been amortized.
+            BondAmortization(
+                asset_id=asset.id,
+                amortization_date=date(2025, 1, 10),
+                amount_per_unit_kopecks=20_000,
+                source=DataSource.MOEX,
+            ),
+            # The stale manual price the user currently sees.
+            Quote(
+                asset_id=asset.id,
+                quote_date=today_local() - timedelta(days=7),
+                price_micro=97_600_000,
+                price_type=PriceType.PERCENT,
+                source=DataSource.MANUAL,
+            ),
+        ]
+    )
+    db_session.commit()
+
+    # The first request still asks for TQCB; MOEX only lists TQOB, so the
+    # service retries without a board (second request) and moves the asset.
+    respx.get(f"{BASE_URL}/securities/{secid}.json").mock(
+        side_effect=[
+            httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json")),
+            httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json")),
+        ]
+    )
+    respx.get(f"{BASE_URL}/engines/stock/markets/bonds/boards/TQOB/securities/{secid}.json").mock(
+        return_value=httpx.Response(
+            200, json=load_fixture("moex", "security_su26238_tqob_board.json")
+        )
+    )
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQOB/securities/{secid}.json"
+    ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
+    respx.get(f"{BASE_URL}/securities/{secid}/bondization.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "bondization_su26238_tqob.json"))
+    )
+
+    response = client.post(f"/api/assets/{asset.id}/refresh")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["board"] == "TQOB"
+    assert body["isin"] == "RU000A1038V6"
+
+    position = next(
+        item
+        for item in client.get("/api/positions").json()["items"]
+        if item["asset"]["secid"] == secid
+    )
+    assert position["quantity"] == 60
+    assert position["current_price"] == "51.610000"
+    assert position["price_source"] == "MOEX"
+    assert position["is_stale"] is False
+    assert position["current_face_value"] == "800.00"
+    assert position["market_value"] == "24772.80"
+
+    db_session.rollback()
+    db_session.expire_all()
+    stored = db_session.get(Asset, asset.id)
+    assert stored is not None
+    assert stored.board == "TQOB"
+    assert stored.market == "bonds"
 
 
 @respx.mock

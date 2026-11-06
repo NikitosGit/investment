@@ -4,7 +4,9 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
+import httpx
 import pytest
+import respx
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -14,11 +16,12 @@ from app.core.errors import AppError
 from app.core.time import today_local
 from app.db.models.operation import Operation
 from app.db.models.quote import Quote
+from app.providers.moex.client import MoexClient
 from app.providers.moex.errors import MoexUnavailable
 from app.providers.moex.schemas import HistoryPoint
 from app.services import portfolio_service, quote_service
 
-from quote_helpers import HistoryClient, create_bond, create_stock  # isort: skip
+from quote_helpers import BASE_URL, HistoryClient, create_bond, create_stock  # isort: skip
 
 
 def test_upsert_protects_manual_from_moex(db_session: Session) -> None:
@@ -95,6 +98,33 @@ def test_backfill_upserts_and_skips_non_positive(db_session: Session) -> None:
         (date(2026, 1, 10), 100_000_000)
     ]
     assert client.calls[0]["args"][3:5] == (date(2026, 1, 1), date(2026, 1, 31))
+
+
+@respx.mock
+def test_backfill_ofz_on_tqob_uses_live_history(
+    db_session: Session,
+    moex_client: MoexClient,
+    load_fixture: Any,
+) -> None:
+    asset = create_bond(db_session)
+    asset.board = "TQOB"
+    db_session.commit()
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQOB/securities/SU26238RMFS4.json"
+    ).mock(return_value=httpx.Response(200, json=load_fixture("moex", "history_su26238_tqob.json")))
+
+    written = quote_service.backfill_history(
+        db_session, moex_client, asset, date(2026, 11, 1), date(2026, 11, 6)
+    )
+    db_session.commit()
+
+    assert written == 3
+    quotes = db_session.scalars(select(Quote).order_by(Quote.quote_date)).all()
+    assert [(quote.quote_date, quote.price_micro) for quote in quotes] == [
+        (date(2026, 11, 2), 52_045_000),
+        (date(2026, 11, 3), 51_993_000),
+        (date(2026, 11, 5), 51_752_000),
+    ]
 
 
 def test_backfill_overlaps_one_day_before_last_quote(db_session: Session) -> None:

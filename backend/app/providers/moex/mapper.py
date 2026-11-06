@@ -22,11 +22,12 @@ from app.providers.moex.schemas import (
     SecuritySearchResult,
 )
 
-# Single source of truth for the boards supported by the MVP:
+# Single source of truth for the supported boards:
 # board -> (market, asset type). The lookups below are derived views.
 BOARD_SPECS: dict[str, tuple[str, AssetType]] = {
     "TQBR": ("shares", AssetType.STOCK),
     "TQCB": ("bonds", AssetType.BOND),
+    "TQOB": ("bonds", AssetType.BOND),
 }
 
 BOARD_TYPES: dict[str, AssetType] = {board: spec[1] for board, spec in BOARD_SPECS.items()}
@@ -135,7 +136,7 @@ def _type_for_board(board: str | None, row: dict[str, Any] | None = None) -> Ass
 def parse_search_results(payload: dict[str, Any]) -> list[SecuritySearchResult]:
     """Parse the ``securities`` table of a search response.
 
-    Only traded securities on a supported board (TQBR/TQCB) are returned.
+    Only traded securities on a supported board (TQBR/TQCB/TQOB) are returned.
     """
 
     results: list[SecuritySearchResult] = []

@@ -1,0 +1,15 @@
+{
+"history": {
+	"columns": ["BOARDID", "TRADEDATE", "SHORTNAME", "SECID", "NUMTRADES", "VALUE", "LOW", "HIGH", "CLOSE", "LEGALCLOSEPRICE", "ACCINT", "WAPRICE", "YIELDCLOSE", "OPEN", "VOLUME", "MARKETPRICE2", "MARKETPRICE3", "ADMITTEDQUOTE", "MP2VALTRD", "MARKETPRICE3TRADESVALUE", "ADMITTEDVALUE", "MATDATE", "DURATION", "YIELDATWAP", "IRICPICLOSE", "BEICLOSE", "COUPONPERCENT", "COUPONVALUE", "BUYBACKDATE", "LASTTRADEDATE", "FACEVALUE", "CURRENCYID", "CBRCLOSE", "YIELDTOOFFER", "YIELDLASTCOUPON", "OFFERDATE", "FACEUNIT", "TRADINGSESSION", "CALLOPTIONDATE", "CALLOPTIONYIELD", "CALLOPTIONDURATION", "PUTOPTIONDATE", "DATEYIELDFROMISSUER", "TRADE_SESSION_DATE", "ZSPREAD", "ZSPREADATWAPRICE", "BONDTYPE", "BONDSUBTYPE", "COUPON_DETAILS", "FACEVALUE_TYPE"], 
+	"data": [
+		["TQOB", "2026-11-02", "ОФЗ 26238", "SU26238RMFS4", 19845, 763477797.07, 51.96, 52.261, 52.045, 51.961, 29.56, 52.1, 16.08, 52.2, 1465398, 52.084, 52.084, null, 573528546.26, 573528546.26, null, "2041-05-15", 2475, 16.06, null, null, 7.1, 35.4, null, "2026-11-02", 1000, "SUR", null, null, null, null, "RUB", 3, null, null, null, null, null, "2026-11-02", 0.44, 0.42, "Облигация с фиксированным (известным) купоном", "До погашения", "Фиксированный с известными купонами", "Фиксированный"],
+		["TQOB", "2026-11-03", "ОФЗ 26238", "SU26238RMFS4", 9430, 549165637.39, 51.879, 52.098, 51.993, 51.936, 29.76, 51.974, 16.1, 52.045, 1056626, 51.971, 51.971, null, 510089671.64, 510089671.64, null, "2041-05-15", 2470, 16.1, null, null, 7.1, 35.4, null, "2026-11-03", 1000, "SUR", null, null, null, null, "RUB", 3, null, null, null, null, null, "2026-11-03", 0.48, 0.49, "Облигация с фиксированным (известным) купоном", "До погашения", "Фиксированный с известными купонами", "Фиксированный"],
+		["TQOB", "2026-11-05", "ОФЗ 26238", "SU26238RMFS4", 21657, 644293020.6, 51.647, 52.019, 51.752, 51.675, 30.15, 51.787, 16.17, 51.95, 1244121, 51.753, 51.753, null, 489059684.61, 489059684.61, null, "2041-05-15", 2464, 16.16, null, null, 7.1, 35.4, null, "2026-11-05", 1000, "SUR", null, null, null, null, "RUB", 3, null, null, null, null, null, "2026-11-05", 0.56, 0.55, "Облигация с фиксированным (известным) купоном", "До погашения", "Фиксированный с известными купонами", "Фиксированный"]
+	]
+},
+"history.cursor": {
+	"columns": ["INDEX", "TOTAL", "PAGESIZE"], 
+	"data": [
+		[0, 3, 100]
+	]
+}}

@@ -26,6 +26,9 @@ def test_refresh_asset_writes_today_quote(
     load_fixture: Callable[..., Any],
 ) -> None:
     asset = create_stock(db_session)
+    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
+    )
     respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "marketdata_sber.json"))
     )
@@ -54,6 +57,9 @@ def test_refresh_all_official_close_overwrites_intraday_today(
             "data": [[today.isoformat(), 300.0]],
         }
     }
+    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
+    )
     respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "marketdata_sber.json"))
     )
@@ -79,14 +85,24 @@ def test_refresh_all_counts_errors_and_stores_status(
 ) -> None:
     good = create_stock(db_session, "SBER")
     bad = create_stock(db_session, "GAZP")
+    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
+    )
+    respx.get(f"{BASE_URL}/securities/GAZP.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp.json"))
+    )
+    # Board details for metadata resolution first, then a failing quote.
+    respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/GAZP.json").mock(
+        side_effect=[
+            httpx.Response(200, json=load_fixture("moex", "security_gazp_board.json")),
+            httpx.Response(500),
+        ]
+    )
     respx.get(
         f"{BASE_URL}/history/engines/stock/markets/shares/boards/TQBR/securities/SBER.json"
     ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
     respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "marketdata_sber.json"))
-    )
-    respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/GAZP.json").mock(
-        return_value=httpx.Response(500)
     )
 
     result = quote_service.refresh_all(db_session, moex_client)
@@ -114,6 +130,15 @@ def test_refresh_all_hides_internal_error_detail(
 ) -> None:
     create_stock(db_session, "SBER")
     create_stock(db_session, "GAZP")
+    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
+    )
+    respx.get(f"{BASE_URL}/securities/GAZP.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp.json"))
+    )
+    respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/GAZP.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_gazp_board.json"))
+    )
     respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/SBER.json").mock(
         return_value=httpx.Response(200, json=load_fixture("moex", "marketdata_sber.json"))
     )
@@ -141,8 +166,12 @@ def test_refresh_all_hides_internal_error_detail(
 def test_refresh_all_marks_failed_when_every_asset_fails(
     db_session: Session,
     moex_client: MoexClient,
+    load_fixture: Callable[..., Any],
 ) -> None:
     create_stock(db_session)
+    respx.get(f"{BASE_URL}/securities/SBER.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_sber.json"))
+    )
     respx.get(f"{BASE_URL}/engines/stock/markets/shares/boards/TQBR/securities/SBER.json").mock(
         return_value=httpx.Response(500)
     )
@@ -163,6 +192,9 @@ def test_refresh_all_syncs_bond_schedule(
     load_fixture: Callable[..., Any],
 ) -> None:
     create_bond(db_session)
+    respx.get(f"{BASE_URL}/securities/SU26238RMFS4.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "security_ofz.json"))
+    )
     respx.get(
         f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQCB/securities/SU26238RMFS4.json"
     ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
@@ -179,6 +211,74 @@ def test_refresh_all_syncs_bond_schedule(
     assert (
         settings_service.get_value(db_session, settings_service.LAST_QUOTE_REFRESH_STATUS) == "ok"
     )
+
+
+@respx.mock
+def test_refresh_all_moves_legacy_tqcb_ofz_to_tqob(
+    db_session: Session,
+    moex_client: MoexClient,
+    load_fixture: Callable[..., Any],
+) -> None:
+    asset = create_bond(db_session)
+    respx.get(f"{BASE_URL}/securities/SU26238RMFS4.json").mock(
+        side_effect=[
+            httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json")),
+            httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json")),
+        ]
+    )
+    respx.get(
+        f"{BASE_URL}/engines/stock/markets/bonds/boards/TQOB/securities/SU26238RMFS4.json"
+    ).mock(
+        return_value=httpx.Response(
+            200, json=load_fixture("moex", "security_su26238_tqob_board.json")
+        )
+    )
+    respx.get(
+        f"{BASE_URL}/history/engines/stock/markets/bonds/boards/TQOB/securities/SU26238RMFS4.json"
+    ).mock(return_value=httpx.Response(200, json=EMPTY_HISTORY))
+    respx.get(f"{BASE_URL}/securities/SU26238RMFS4/bondization.json").mock(
+        return_value=httpx.Response(200, json=load_fixture("moex", "bondization_su26238_tqob.json"))
+    )
+
+    result = quote_service.refresh_all(db_session, moex_client)
+
+    assert (result.updated, result.failed) == (1, 0)
+    assert asset.board == "TQOB"
+    assert asset.market == "bonds"
+    quote = quote_service.get_last_quote(db_session, asset.id)
+    assert quote is not None
+    assert quote.price_micro == 51_610_000
+    assert quote.price_type is PriceType.PERCENT
+    assert quote.source is DataSource.MOEX
+
+
+@respx.mock
+def test_refresh_asset_resolves_current_board_for_legacy_asset(
+    db_session: Session,
+    moex_client: MoexClient,
+    load_fixture: Callable[..., Any],
+) -> None:
+    asset = create_bond(db_session)
+    respx.get(f"{BASE_URL}/securities/SU26238RMFS4.json").mock(
+        side_effect=[
+            httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json")),
+            httpx.Response(200, json=load_fixture("moex", "security_su26238_tqob.json")),
+        ]
+    )
+    respx.get(
+        f"{BASE_URL}/engines/stock/markets/bonds/boards/TQOB/securities/SU26238RMFS4.json"
+    ).mock(
+        return_value=httpx.Response(
+            200, json=load_fixture("moex", "security_su26238_tqob_board.json")
+        )
+    )
+
+    quote = quote_service.refresh_asset(db_session, moex_client, asset)
+
+    assert quote is not None
+    assert quote.price_micro == 51_610_000
+    assert asset.board == "TQOB"
+    assert asset.market == "bonds"
 
 
 def test_refresh_all_rejects_concurrent_run(db_session: Session, moex_client: MoexClient) -> None:

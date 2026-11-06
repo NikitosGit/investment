@@ -8,6 +8,7 @@ import pytest
 from app.core.enums import AssetType, PriceType
 from app.providers.moex.errors import MoexParseError
 from app.providers.moex.mapper import (
+    BOARD_SPECS,
     get_field,
     parse_bondization,
     parse_current_quote,
@@ -27,7 +28,14 @@ def test_search_keeps_only_traded_supported_boards(load_fixture: Any) -> None:
     assert by_secid["SBER"].type is AssetType.STOCK
     assert by_secid["SBER"].board == "TQBR"
     assert by_secid["SU26238RMFS4"].type is AssetType.BOND
-    assert by_secid["SU26238RMFS4"].isin == "RU000A0JX0J2"
+    assert by_secid["SU26238RMFS4"].board == "TQOB"
+    assert by_secid["SU26238RMFS4"].isin == "RU000A1038V6"
+
+
+def test_board_specs_include_government_bonds() -> None:
+    assert BOARD_SPECS["TQBR"] == ("shares", AssetType.STOCK)
+    assert BOARD_SPECS["TQCB"] == ("bonds", AssetType.BOND)
+    assert BOARD_SPECS["TQOB"] == ("bonds", AssetType.BOND)
 
 
 def test_security_info_prefers_requested_board(load_fixture: Any) -> None:
@@ -47,6 +55,24 @@ def test_security_info_parses_bond_face_value(load_fixture: Any) -> None:
 
     assert info is not None
     assert info.type is AssetType.BOND
+    assert info.face_value_kopecks == 100_000
+    assert info.lot_size == 1
+
+
+def test_security_info_parses_live_ofz_on_tqob(load_fixture: Any) -> None:
+    payload = load_fixture("moex", "security_su26238_tqob.json")
+
+    info = parse_security_info(
+        payload,
+        board="TQOB",
+        board_payload=load_fixture("moex", "security_su26238_tqob_board.json"),
+    )
+
+    assert info is not None
+    assert info.secid == "SU26238RMFS4"
+    assert info.board == "TQOB"
+    assert info.type is AssetType.BOND
+    assert info.isin == "RU000A1038V6"
     assert info.face_value_kopecks == 100_000
     assert info.lot_size == 1
 

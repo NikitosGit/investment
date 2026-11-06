@@ -1,8 +1,10 @@
 """Asset lifecycle: MOEX search, creation, refresh and deletion.
 
-Only two boards are supported in the MVP: ``TQBR`` (stocks) and ``TQCB``
-(bonds). An asset is uniquely identified by ``(secid, board)`` and tickers are
-normalized at the service boundary.
+Supported boards are ``TQBR`` (stocks), ``TQCB`` (corporate bonds) and
+``TQOB`` (government bonds). An asset is uniquely identified by
+``(secid, board)`` and tickers are normalized at the service boundary. MOEX
+can move a security between boards (for example OFZ from ``TQCB`` to
+``TQOB``), so refreshing an existing asset also resolves its current board.
 """
 
 import json
@@ -21,6 +23,7 @@ from app.db.models.operation import Operation
 from app.db.models.quote import Quote
 from app.providers.moex import mapper
 from app.providers.moex.client import MoexClient
+from app.providers.moex.errors import MoexNotFound
 from app.providers.moex.schemas import SecurityInfo, SecuritySearchResult
 from app.services import bondization_service, portfolio_service
 
@@ -131,16 +134,61 @@ def create_from_moex(session: Session, client: MoexClient, *, secid: str, board:
     return asset
 
 
+def resolve_security_info(session: Session, client: MoexClient, asset: Asset) -> SecurityInfo:
+    """Return MOEX metadata, following a security to its current board.
+
+    The stored board is requested first. When MOEX no longer lists the
+    security there (``MoexNotFound``), the primary/supported board is used
+    instead. A switch is only accepted when the new board is supported and
+    belongs to the same asset type; otherwise the original error is replaced
+    with a domain error and the asset stays unchanged.
+
+    The caller owns the transaction: this helper updates ``asset.board`` and
+    ``asset.market`` in memory but never commits.
+    """
+
+    asset_type = asset.type
+    _board_spec(asset.board)
+    secid = normalize_secid(asset.secid)
+    try:
+        info = client.get_security_info(secid, board=asset.board)
+    except MoexNotFound:
+        info = client.get_security_info(secid)
+        market, board_type = _board_spec(info.board)
+        if board_type is not asset_type:
+            raise AppError(
+                ErrorCode.BAD_REQUEST,
+                f"Тип бумаги {info.secid} не соответствует площадке {info.board}",
+                status_code=400,
+                details={"secid": info.secid, "board": info.board, "type": info.type.value},
+            ) from None
+        _validate_info(info, asset_type)
+        conflict = _find_asset(session, secid, info.board)
+        if conflict is not None and conflict.id != asset.id:
+            raise AppError(
+                ErrorCode.ASSET_ALREADY_EXISTS,
+                f"Бумага {secid} на площадке {info.board} уже добавлена",
+                status_code=409,
+                details={
+                    "asset_id": asset.id,
+                    "board": info.board,
+                    "existing_asset_id": conflict.id,
+                },
+            ) from None
+        asset.board = info.board
+        asset.market = market
+    else:
+        _validate_info(info, asset_type)
+    return info
+
+
 def refresh_asset(session: Session, client: MoexClient, asset: Asset) -> Asset:
     """Refresh metadata (and bond schedules) of an existing asset atomically."""
 
-    _, asset_type = _board_spec(asset.board)
-    secid = normalize_secid(asset.secid)
-    info = client.get_security_info(secid, board=asset.board)
-    _validate_info(info, asset_type)
-
+    asset_type = asset.type
     try:
-        asset.secid = secid
+        info = resolve_security_info(session, client, asset)
+        asset.secid = normalize_secid(asset.secid)
         asset.name = info.name
         asset.short_name = info.short_name
         asset.isin = info.isin

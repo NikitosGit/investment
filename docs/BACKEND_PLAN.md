@@ -127,9 +127,9 @@ Backend считается готовым к передаче, когда:
 ### Идентификация активов
 
 - Акции: `engine=stock`, `market=shares`, `board=TQBR`.
-- Облигации: `engine=stock`, `market=bonds`, `board=TQCB`.
+- Облигации: `engine=stock`, `market=bonds`, `board=TQCB` (корпоративные) или `TQOB` (ОФЗ).
 - Уникальность: `(secid, board)`.
-- Для MVP поддерживаются только бумаги с `primary_boardid` `TQBR` или `TQCB`.
+- Поддерживаются бумаги с `primary_boardid` `TQBR`, `TQCB` или `TQOB`.
 - Остальные площадки отклоняются с понятной ошибкой.
 
 ## 3. Структура проекта
@@ -302,7 +302,7 @@ PRAGMA synchronous=NORMAL;
 | `type` | VARCHAR(10) | NOT NULL, `STOCK` / `BOND` |
 | `engine` | VARCHAR(10) | NOT NULL, `stock` |
 | `market` | VARCHAR(10) | NOT NULL, `shares` / `bonds` |
-| `board` | VARCHAR(10) | NOT NULL, `TQBR` / `TQCB` |
+| `board` | VARCHAR(10) | NOT NULL, `TQBR` (акции) / `TQCB`, `TQOB` (облигации) |
 | `currency` | CHAR(3) | NOT NULL, `RUB` |
 | `initial_face_value_kopecks` | INTEGER | NULL, только облигации |
 | `lot_size` | INTEGER | NOT NULL, default 1 |
@@ -646,9 +646,9 @@ GET /iss/securities.json?q={query}&iss.meta=off
 Фильтры:
 
 - `is_traded = 1`.
-- `primary_boardid in (TQBR, TQCB)`.
+- `primary_boardid in (TQBR, TQCB, TQOB)`.
 - Типы: акции (`common_share`, `preferred_share`, `stock`) и облигации (`ofz_bond`, `corporate_bond`, `exchange_bond`, `bond`).
-- Для MVP можно ориентироваться на board: `TQBR` → `STOCK`, `TQCB` → `BOND`.
+- Для MVP можно ориентироваться на board: `TQBR` → `STOCK`, `TQCB`/`TQOB` → `BOND`; `TQOB` — рынок `bonds`, ОФЗ.
 
 Ответ API:
 
@@ -692,7 +692,9 @@ GET /iss/engines/stock/markets/{market}/boards/{board}/securities/{secid}.json?i
 
 Если `description`/`boards` нет, поддерживается старый формат с таблицей `securities`: `SECNAME`, `SHORTNAME`, `ISIN`, `FACEVALUE`, `FACEUNIT`, `LOTSIZE`, `BOARDID`, `TYPE`.
 
-Поддерживаются только площадки `TQBR` (акции) и `TQCB` (облигации). ОФЗ на `TQOB` в MVP не входят.
+Поддерживаются площадки `TQBR` (акции), `TQCB` (корпоративные облигации) и `TQOB` (ОФЗ, рынок `bonds`).
+
+MOEX может перенести бумагу на другую поддерживаемую площадку (например, ОФЗ `TQCB` → `TQOB`). При refresh сохранённый board проверяется; если MOEX его больше не отдаёт, backend выбирает актуальный primary/supported board того же типа и обновляет `asset.board`/`asset.market`. Quote refresh и history затем используют уже актуальный board, поэтому цена ОФЗ обновляется с MOEX.
 
 ### 7.3 Текущая цена
 
@@ -896,11 +898,11 @@ GET /iss/securities/{secid}/bondization.json?iss.meta=off
 {
   "id": 2,
   "secid": "SU26238RMFS4",
-  "isin": "RU000A0JX0J2",
+  "isin": "RU000A1038V6",
   "name": "ОФЗ 26238",
   "short_name": "ОФЗ 26238",
   "type": "BOND",
-  "board": "TQCB",
+  "board": "TQOB",
   "currency": "RUB",
   "initial_face_value": "1000.00",
   "current_face_value": "1000.00",
